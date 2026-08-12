@@ -8,16 +8,17 @@
       "python -m screen2action.tools.verify all",
       "screen2action doctor --device cpu --json",
       "python -m screen2action.tools.verify all",
+      "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all"
     ],
     "refresh_handoff": "screen2action handoff snapshot",
     "resume": "screen2action train smoke --device cpu"
   },
   "data_manifests": [],
-  "generated_at_utc": "2026-08-12T17:55:30+00:00",
+  "generated_at_utc": "2026-08-12T18:19:19+00:00",
   "git": {
     "branch": "main",
-    "commit": "f91b806e81eb34671c157d50378bb6df7fba2c64",
+    "commit": "a97f3a73507b5da4e3617677d35d930560af659d",
     "dirty": false,
     "dirty_entry_count": 0,
     "generated_files_excluded_from_dirty_check": [
@@ -37,7 +38,7 @@
     "os": "Windows",
     "os_release": "11",
     "python": "3.12.10",
-    "repository_volume_free_bytes": 32659832832
+    "repository_volume_free_bytes": 32654761984
   },
   "models": {
     "lock_path": "configs/models/lock.json",
@@ -48,12 +49,13 @@
   },
   "perception_cache_manifests": [],
   "plan": {
-    "active_milestone": "Milestone 3 - production perception and taxonomy",
+    "active_milestone": "Milestone 4 - unified trainable paper-reference model",
     "active_path": "docs/plans/complete_pipeline.md",
     "completed_milestones": [
       "Milestone 0 - repository truth and resumable handoff",
       "Milestone 1 - typed configuration, CLI, and environment diagnostics",
-      "Milestone 2 - model registry and reproducible assets"
+      "Milestone 2 - model registry and reproducible assets",
+      "Milestone 3 - production perception and taxonomy"
     ]
   },
   "unresolved_decisions": [
