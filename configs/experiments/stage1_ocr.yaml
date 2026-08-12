@@ -1,0 +1,14 @@
+extends: public_smoke_real_models.yaml
+schema_version: 1
+name: stage1_ocr
+training:
+  stage: stage1_ocr
+  epochs: 12
+  max_commands: null
+ocr_native:
+  backend: doctr
+  crop_size: 32
+  max_width: 128
+  workers: 4
+notes:
+  paper_boundary: Uses recognition-native CTC loss on tight source text crops; decoding remains discrete.

@@ -31,6 +31,12 @@ screen2action config validate --config configs/model/tiny_cpu.yaml --json
 screen2action train smoke --device cpu --json
 ```
 
+Manifest-bound stage training is available through `screen2action train run`
+and `torchrun -m screen2action.training.launch`. The checked-in experiment
+configs cover Stage 1 semantic/native perception, Stage 2 cached selection and
+grounding, Stage 3 joint reconstruction, and optional Stage 4 QAT. See
+`docs/GPU_RUNBOOK.md` for the immutable-input and exact-resume workflow.
+
 Configuration supports recursive `extends`, `${ENV_VAR}` or
 `${ENV_VAR:-default}` expansion, repeatable `--set dotted.key=value`
 overrides, schema validation, and resolved snapshots in run directories.

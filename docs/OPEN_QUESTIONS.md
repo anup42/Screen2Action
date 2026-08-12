@@ -26,5 +26,11 @@ kept visible so later experiments do not silently turn defaults into facts.
     identity?
 14. Which licensed RICO screenshot/package metadata release should be joined
     to RICO Semantics for production icon-taxonomy and app-disjoint use?
+15. Did the paper jointly optimize detector-native losses with downstream
+    losses, and if so what update ratio and optimizer state sharing were used?
+16. Which exact CRNN alphabet, Unicode normalization, augmentation, and CTC
+    blank-token convention were used for UI-specific OCR fine-tuning?
+17. Which operations were quantized for the reported mobile model, including
+    activation granularity, calibration observer, backend, and fallback policy?
 
 Until these are answered, reports must label results as reconstruction results.

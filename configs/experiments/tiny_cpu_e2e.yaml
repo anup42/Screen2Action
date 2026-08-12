@@ -1,0 +1,44 @@
+schema_version: 1
+name: tiny_cpu_e2e
+device: cpu
+model:
+  profile: tiny_cpu
+  embedding_dim: 32
+  vocab_size: 2048
+  visual_feature_dim: 16
+  graph_layers: 1
+  graph_heads: 4
+  graph_variant: cpu_reconstruction_v1
+  command_layers: 1
+  command_heads: 4
+  command_ffn: 128
+  command_max_length: 32
+  node_text_length: 12
+  top_k: 4
+  ssb_budget: 128
+  crop_size: 48
+  crop_tokens: 9
+  semantic_crop_size: 64
+training:
+  stage: stage2_selector_retrieval
+  epochs: 1
+  global_batch_size: 8
+  per_device_batch_size: 1
+  seed: 17
+  precision: fp32
+  new_head_lr: 0.0002
+  pretrained_lr: 0.00002
+  weight_decay: 0.05
+  scheduler: cosine
+  warmup_fraction: 0.05
+  gradient_clip_norm: 1.0
+  log_interval: 1
+  validation_interval_epochs: 1
+  validation_required: true
+  checkpoint_interval_optimizer_steps: 10
+  frozen_crop_warmup_epochs: 0
+  tensorboard: false
+  gumbel_temperature_start: 1.0
+  gumbel_temperature_end: 0.1
+  gumbel_anneal_fraction: 0.8
+  forced_positive_probability_first_two_epochs: 0.5

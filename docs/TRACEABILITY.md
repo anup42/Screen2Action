@@ -24,11 +24,11 @@ no qualifying implementation evidence exists.
 | S2A-013 | tiny CPU overfit workflow | complete | n/a | not-started | n/a |
 | S2A-014 | seven fixture-backed public adapters plus retained synthetic framework and exact reject audits | complete | partial | partial | n/a |
 | S2A-015 | oracle perception interface boundary | complete | not-started | not-started | not-started |
-| S2A-016 | basic trainer/checkpoint/stage helpers | complete | partial | not-started | n/a |
+| S2A-016 | exact-resume stage runner/checkpoint/distributed helpers | complete | partial | partial | n/a |
 | S2A-017 | metric/sweep/timing primitives | complete | partial | not-started | n/a |
 | S2A-018 | confidence calibration primitive | complete | partial | not-started | n/a |
 | S2A-019 | fixed-shape tiny ONNX export and ONNXRuntime parity | complete | not-started | not-started | partial |
-| S2A-020 | PTQ/QAT utility interfaces | partial | not-started | not-started | not-started |
+| S2A-020 | train-only calibration, per-channel QAT/weight-only PTQ comparison and unsupported-op inventory | complete | partial | partial | not-started |
 | S2A-021 | structured runtime logging/toy duplicate diagnostics | complete | partial | partial | partial |
 | S2A-022 | resumable handoff/provenance/runbooks | complete | partial | partial | partial |
 | S2A-023 | unified CLI/config/doctor | complete | partial | partial | partial |
@@ -37,7 +37,7 @@ no qualifying implementation evidence exists.
 | S2A-026 | unified trainable model, batched masks, paper graph/reranker, retention, BERT/MobileViT adapters, typed heads | complete | partial | partial | partial |
 | S2A-027 | immutable source acquisition, seven adapters, app split, scalable dedup, weak references, manifest enforcement, deterministic shards | complete | partial | partial | n/a |
 | S2A-028 | unique-screen hash sharding, atomic resume/retry, raw/final cache evidence, validation/stats, cache-only Stage-2 loader | complete | partial | partial | host-only |
-| S2A-029 | complete torchrun/DDP stage system | not-started | partial | not-started | n/a |
+| S2A-029 | torchrun Gloo/NCCL runner, four stages, native branches, exact resume, structured artifacts | complete | partial | partial | n/a |
 | S2A-030 | production evaluation/calibration/reporting | not-started | not-started | not-started | n/a |
 | S2A-031 | four-partition paper-reference export/runtime | not-started | not-started | not-started | not-started |
 
@@ -65,5 +65,8 @@ paths are exercised; no status is inferred from architecture-only tests.
 | 12/8/6 epochs, optimizer/LR/objective weights | paper/supplied contract | train configs, `training/stages.py`, losses |
 | 12% per-side crop margin | reconstruction ADR-0008 | `runtime/cropper.py`, crop test |
 | Stage 2 positive insertion 0.5 for first two epochs | supplied contract ADR-0005 | `training/stages.py`, adapter/sweep tests |
+| Stage 1 semantic default and native detector/OCR branches | reconstruction ADR-0023 | experiment configs, `training/semantics.py`, `detector_native.py`, `ocr_native.py` |
+| Exact DDP resume and final accumulation flush | reconstruction ADR-0022 | `training/runner.py`, `engine.py`, checkpoint and two-process tests |
+| per-channel QAT plus weight-only PTQ comparison | reconstruction ADR-0024 | `training/quantization.py`, Stage 4 integration tests |
 | public model IDs and initial detector thresholds | supplied reconstruction | `configs/models/registry.yaml`, `MODEL_PROVENANCE.md` |
 | public source revisions, license notes, and conversion boundaries | upstream evidence plus reconstruction | `configs/data/sources.yaml`, `DATASET_RUNBOOK.md`, ADR-0020 |

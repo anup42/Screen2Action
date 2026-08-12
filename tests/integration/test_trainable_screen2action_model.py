@@ -199,3 +199,42 @@ def test_thin_runtime_requires_caller_controlled_eval_mode() -> None:
     model.eval()
     output = runtime.predict(batch)
     assert output.stage == "inference"
+
+
+def test_stage2_forced_positive_insertion_overrides_same_screen_top_k() -> None:
+    config = replace(Screen2ActionModelConfig.tiny_cpu(), ssb_budget=512, top_k=1)
+    model = Screen2ActionModel(config=config)
+    model.retention_scorer.projection.weight.data.zero_()
+    model.retention_scorer.projection.bias.data.fill_(10.0)
+    model.train()
+    image = torch.zeros((3, 32, 48), dtype=torch.uint8)
+    commands = replace(
+        _commands(),
+        input_ids=_commands().input_ids[:1],
+        attention_mask=_commands().attention_mask[:1],
+        screen_indices=torch.zeros(1, dtype=torch.long),
+        target_node_ids=torch.zeros(1, dtype=torch.long),
+        target_mask=torch.ones(1, dtype=torch.bool),
+        reference_node_ids=torch.zeros((1, 1), dtype=torch.long),
+        reference_mask=torch.zeros((1, 1), dtype=torch.bool),
+        action_types=torch.zeros(1, dtype=torch.long),
+        action_mask=torch.zeros(1, dtype=torch.bool),
+        target_boxes=torch.tensor([[0.0, 0.0, 1.0, 1.0]]),
+        target_box_mask=torch.ones(1, dtype=torch.bool),
+        target_points=torch.zeros((1, 2)),
+        target_point_mask=torch.zeros(1, dtype=torch.bool),
+        parameter_targets=torch.zeros((1, 9)),
+        parameter_mask=torch.zeros((1, 9), dtype=torch.bool),
+        parameter_node_ids=torch.zeros((1, 2), dtype=torch.long),
+        parameter_node_mask=torch.zeros((1, 2), dtype=torch.bool),
+    )
+
+    output = model(
+        Screen2ActionBatch((image,), commands, perceived_frames=(_frame(image, 0),)),
+        stage="stage2_grounding",
+        forced_positive_probability=1.0,
+        generator=torch.Generator().manual_seed(4),
+    )
+
+    assert output.grounded_commands.forced_positive_mask.tolist() == [True]
+    assert output.grounded_commands.candidate_node_ids.tolist() == [[0]]

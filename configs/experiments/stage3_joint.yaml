@@ -1,0 +1,15 @@
+extends: public_smoke_real_models.yaml
+schema_version: 1
+name: stage3_joint
+training:
+  stage: stage3_joint
+  epochs: 6
+  max_commands: null
+  frozen_crop_warmup_epochs: 0
+  forced_positive_probability_first_two_epochs: 0.0
+joint_native_branches:
+  semantic_perception_weight: 1.0
+  detector_native_enabled: false
+  detector_update_policy: alternating
+notes:
+  paper_boundary: OCR stays frozen and detector losses, when enabled, use a separate native branch.

@@ -1,0 +1,14 @@
+extends: public_smoke_real_models.yaml
+schema_version: 1
+name: stage1_full
+training:
+  stage: stage1_full
+  epochs: 12
+  max_commands: null
+stage1_full:
+  semantics_graph: true
+  detector: false
+  ocr: false
+notes:
+  reconstruction: Each enabled native or semantic branch writes a separate checkpoint lineage.
+  paper_boundary: No downstream gradient is claimed through NMS or OCR decoding.

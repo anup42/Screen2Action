@@ -1,0 +1,11 @@
+extends: public_smoke_real_models.yaml
+schema_version: 1
+name: stage1_semantics_graph
+training:
+  stage: stage1_semantics_graph
+  epochs: 12
+  max_commands: null
+  frozen_crop_warmup_epochs: 0
+notes:
+  paper_boundary: ScreenParser NMS and OCR decoding are frozen, discrete boundaries.
+  reconstruction: Train MobileNetV3 semantic heads, node projection, and relation GAT from source labels.

@@ -51,6 +51,11 @@ class WaveUiAdapter(MaterializedPublicAdapter):
                     "bbox": record.get("bbox"),
                     "type": raw_type,
                     "text": record.get("name") or record.get("OCR"),
+                    "clickable": record.get("clickable"),
+                    "scrollable": record.get("scrollable"),
+                    "long_clickable": record.get("long_clickable"),
+                    "iconClass": record.get("iconClass"),
+                    "icon_class_id": record.get("icon_class_id"),
                 }
             ],
             source_item_id=source_item_id,

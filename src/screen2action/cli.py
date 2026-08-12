@@ -356,9 +356,14 @@ def _parser() -> argparse.ArgumentParser:
     _add_json(smoke)
     probe = _leaf(train_commands, "probe-batch", "measure one real batch", "train probe-batch")
     probe.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
-    probe.add_argument("--manifest", type=Path)
+    probe.add_argument("--stage", default="stage2_selector_retrieval")
+    probe.add_argument("--manifest", type=Path, required=True)
     probe.add_argument("--cache-manifest", type=Path)
-    _add_config(probe, default="configs/model/tiny_cpu.yaml", run_directory=True)
+    probe.add_argument("--model-lock", type=Path, default=Path("configs/models/lock.json"))
+    probe.add_argument("--cache-root", type=Path)
+    probe.add_argument("--max-batch-size", type=int, default=64)
+    probe.add_argument("--max-commands", type=int)
+    _add_config(probe, default="configs/experiments/tiny_cpu_e2e.yaml")
     _add_dry_run(probe)
     _add_json(probe)
     run = _leaf(train_commands, "run", "run or resume a configured stage", "train run")
@@ -366,8 +371,13 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     run.add_argument("--manifest", type=Path, required=True)
     run.add_argument("--cache-manifest", type=Path)
+    run.add_argument("--model-lock", type=Path, default=Path("configs/models/lock.json"))
+    run.add_argument("--cache-root", type=Path)
+    run.add_argument("--max-commands", type=int)
+    run.add_argument("--stop-after-optimizer-steps", type=int, help=argparse.SUPPRESS)
     run.add_argument("--resume", type=Path)
-    _add_config(run, run_directory=True)
+    run.add_argument("--init-checkpoint", type=Path)
+    _add_config(run, default="configs/experiments/tiny_cpu_e2e.yaml", run_directory=True)
     _add_dry_run(run)
     _add_json(run)
 
@@ -554,13 +564,50 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
         config = load_config(args.config, overrides=args.overrides)
         if args.run_dir is not None:
             write_resolved_config(config, args.run_dir)
-        result = run_training_smoke(
+        smoke_result = run_training_smoke(
             device=args.device,
             steps=args.steps,
             run_directory=args.run_dir,
             config=config.values,
         )
-        return dataclasses.asdict(result)
+        return dataclasses.asdict(smoke_result)
+    if args.command_path == "train probe-batch" and not args.dry_run:
+        from screen2action.model_assets import configured_model_cache_root
+        from screen2action.training.runner import probe_batch_size
+
+        config = load_config(args.config, overrides=args.overrides)
+        probe_result = probe_batch_size(
+            config,
+            stage=args.stage,
+            manifest=args.manifest,
+            cache_manifest=args.cache_manifest,
+            model_lock=args.model_lock,
+            model_cache_root=configured_model_cache_root(root, args.cache_root),
+            device=args.device,
+            maximum_batch_size=args.max_batch_size,
+            max_commands=args.max_commands,
+        )
+        return dataclasses.asdict(probe_result)
+    if args.command_path == "train run" and not args.dry_run:
+        from screen2action.model_assets import configured_model_cache_root
+        from screen2action.training.runner import run_training_stage
+
+        config = load_config(args.config, overrides=args.overrides)
+        stage_result = run_training_stage(
+            config,
+            stage=args.stage,
+            manifest=args.manifest,
+            cache_manifest=args.cache_manifest,
+            model_lock=args.model_lock,
+            model_cache_root=configured_model_cache_root(root, args.cache_root),
+            device=args.device,
+            run_directory=args.run_dir,
+            resume=args.resume,
+            init_checkpoint=args.init_checkpoint,
+            max_commands=args.max_commands,
+            stop_after_optimizer_steps=args.stop_after_optimizer_steps,
+        )
+        return dataclasses.asdict(stage_result)
     if args.command_path == "models probe-mobilevit" and not args.dry_run:
         import torch
 

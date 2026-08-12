@@ -1,0 +1,17 @@
+extends: public_smoke_real_models.yaml
+schema_version: 1
+name: stage4_qat
+training:
+  stage: stage4_qat
+  epochs: 3
+  max_commands: null
+  new_head_lr: 0.00002
+  pretrained_lr: 0.000002
+quantization:
+  mode: qat
+  backend: x86
+  per_channel_weights: true
+  calibration_split: train
+  calibration_batches: 100
+  compare_modes: [fp32, ptq, qat]
+  mobile_runtime_measured: false

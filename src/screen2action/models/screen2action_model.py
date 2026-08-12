@@ -152,6 +152,7 @@ class GroundCommandOutput:
     candidate_boxes: torch.Tensor
     expanded_crop_boxes: torch.Tensor
     retrieval_scores: torch.Tensor
+    forced_positive_mask: torch.Tensor
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,12 +253,18 @@ class Screen2ActionModel(nn.Module):
             token_count=self.config.crop_tokens,
             tiny=True,
         )
+        self.crop_encoder_updates_frozen = False
         self.grounder = SparseCandidateGrounder(
             embedding_dim=self.config.embedding_dim,
             heads=self.config.command_heads,
             blocks=2,
         )
         self.confidence_config = confidence_config or ConfidenceReconstructionConfig()
+
+    def set_crop_encoder_updates_frozen(self, frozen: bool) -> None:
+        """Stop crop-encoder gradients while retaining parameters in DDP/optimizer state."""
+
+        self.crop_encoder_updates_frozen = frozen
 
     @property
     def device(self) -> torch.device:
@@ -312,6 +319,7 @@ class Screen2ActionModel(nn.Module):
         *,
         screenshots: Sequence[object] = (),
         stochastic_selector: bool = False,
+        selector_temperature: float | None = None,
         generator: torch.Generator | None = None,
     ) -> EncodedFrameBatch:
         """Encode each unique frame once and pad nodes/edges with explicit masks."""
@@ -392,7 +400,11 @@ class Screen2ActionModel(nn.Module):
             states,
             valid_nodes,
             stochastic=stochastic_selector,
-            temperature=self.config.selector_temperature,
+            temperature=(
+                self.config.selector_temperature
+                if selector_temperature is None
+                else selector_temperature
+            ),
             mandatory_mask=mandatory,
             generator=generator,
         )
@@ -467,6 +479,9 @@ class Screen2ActionModel(nn.Module):
         self,
         encoded_frames: EncodedFrameBatch,
         command_batch: CommandBatch,
+        *,
+        forced_positive_probability: float = 0.0,
+        generator: torch.Generator | None = None,
     ) -> GroundCommandOutput:
         """Fan command retrieval/crops/grounding out from reusable frame states."""
 
@@ -475,6 +490,8 @@ class Screen2ActionModel(nn.Module):
         command_count = command_batch.input_ids.shape[0]
         if command_count == 0:
             raise ValueError("ground_commands requires at least one command")
+        if not 0.0 <= forced_positive_probability <= 1.0:
+            raise ValueError("forced-positive probability must be in [0, 1]")
         if int(command_batch.screen_indices.max()) >= len(encoded_frames.records):
             raise ValueError("command references a screen outside the encoded batch")
         command_encoding = self._command_encoding(command_batch)
@@ -486,6 +503,7 @@ class Screen2ActionModel(nn.Module):
         expanded_boxes: list[torch.Tensor] = []
         crop_batches: list[torch.Tensor] = []
         node_tokens: list[torch.Tensor] = []
+        forced_positive: list[bool] = []
         for command_index in range(command_count):
             screen_index = int(command_batch.screen_indices[command_index])
             nodes = encoded_frames.records[screen_index]
@@ -514,6 +532,33 @@ class Screen2ActionModel(nn.Module):
             )
             positions = retrieval.node_indices
             valid = retrieval.valid
+            scores = retrieval.scores
+            inserted = False
+            if forced_positive_probability > 0.0 and bool(command_batch.target_mask[command_index]):
+                draw = float(torch.rand((), device=self.device, generator=generator).detach().cpu())
+                target_id = int(command_batch.target_node_ids[command_index])
+                target_position = next(
+                    (index for index, node in enumerate(nodes) if node.node_id == target_id),
+                    None,
+                )
+                already_present = bool(
+                    target_position is not None and ((positions == target_position) & valid).any()
+                )
+                if (
+                    draw < forced_positive_probability
+                    and target_position is not None
+                    and not already_present
+                ):
+                    positions = positions.clone()
+                    valid = valid.clone()
+                    scores = scores.clone()
+                    invalid = torch.nonzero(~valid, as_tuple=False).flatten()
+                    slot = int(invalid[0]) if invalid.numel() else len(positions) - 1
+                    positions[slot] = target_position
+                    valid[slot] = True
+                    scores[slot] = reranked[target_position]
+                    inserted = True
+            forced_positive.append(inserted)
             candidate_positions.append(positions)
             candidate_ids.append(
                 [
@@ -522,7 +567,7 @@ class Screen2ActionModel(nn.Module):
                 ]
             )
             candidate_valid.append(valid)
-            retrieval_scores.append(retrieval.scores)
+            retrieval_scores.append(scores)
             boxes = [
                 nodes[int(position)].box_xyxy_norm if bool(valid[rank]) else (0.0, 0.0, 1.0, 1.0)
                 for rank, position in enumerate(positions)
@@ -548,6 +593,8 @@ class Screen2ActionModel(nn.Module):
         crops_tensor = torch.stack(crop_batches).to(self.device)
         flat_crops = crops_tensor.flatten(0, 1)
         crop_tokens = cast(torch.Tensor, self.crop_encoder(flat_crops))
+        if self.crop_encoder_updates_frozen:
+            crop_tokens = crop_tokens.detach()
         expected_shape = (
             command_count * self.config.top_k,
             self.config.crop_tokens,
@@ -584,6 +631,7 @@ class Screen2ActionModel(nn.Module):
             boxes_tensor,
             torch.stack(expanded_boxes),
             torch.stack(retrieval_scores),
+            torch.tensor(forced_positive, dtype=torch.bool, device=self.device),
         )
 
     def _retention_supervision(
@@ -709,6 +757,8 @@ class Screen2ActionModel(nn.Module):
         *,
         stage: str = "stage3_joint",
         step: int = 0,
+        selector_temperature: float | None = None,
+        forced_positive_probability: float = 0.0,
         generator: torch.Generator | None = None,
     ) -> Screen2ActionModelOutput:
         """Run a declared stage and return predictions plus typed loss inputs."""
@@ -735,9 +785,15 @@ class Screen2ActionModel(nn.Module):
             frames,
             screenshots=batch.images,
             stochastic_selector=stochastic,
+            selector_temperature=selector_temperature,
             generator=generator,
         )
-        grounded = self.ground_commands(encoded, batch.commands)
+        grounded = self.ground_commands(
+            encoded,
+            batch.commands,
+            forced_positive_probability=(forced_positive_probability if self.training else 0.0),
+            generator=generator,
+        )
         target_retention, reference_retention = self._retention_supervision(encoded, batch.commands)
         retention_losses = retention_loss(
             encoded.retention,

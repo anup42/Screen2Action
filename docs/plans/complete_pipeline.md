@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 7 - GPU/DDP stage training
+**Active milestone:** Milestone 8 - evaluation, calibration, sweeps, and reports
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -152,15 +152,15 @@ measurement under the stated protocol.
 
 ### Milestone 7 - GPU/DDP stage training
 
-- [ ] Torchrun local-rank setup, Gloo/NCCL selection, DDP, samplers, cleanup,
+- [x] Torchrun local-rank setup, Gloo/NCCL selection, DDP, samplers, cleanup,
       no-sync accumulation, all-reduced metrics, deterministic seeds.
-- [ ] Stage-aware freezing and Stage 1 submodes, Stage 2 schedule, Stage 3
+- [x] Stage-aware freezing and Stage 1 submodes, Stage 2 schedule, Stage 3
       non-OCR joint path, optional Stage 4 quantization.
-- [ ] Correct global-batch accumulation including final partial flush.
-- [ ] Conditional BF16/FP16/scaler/clip, validation, latest/best rank-zero
+- [x] Correct global-batch accumulation including final partial flush.
+- [x] Conditional BF16/FP16/scaler/clip, validation, latest/best rank-zero
       checkpoints, exact resume including sampler state.
-- [ ] JSONL/TensorBoard/run-manifest timing/throughput/VRAM/ETA reporting.
-- [ ] CPU smoke, batch probe, one-process and supported two-process tests.
+- [x] JSONL/TensorBoard/run-manifest timing/throughput/VRAM/ETA reporting.
+- [x] CPU smoke, batch probe, one-process and supported two-process tests.
 
 ### Milestone 8 - evaluation, calibration, sweeps, and reports
 
@@ -229,6 +229,14 @@ measurement under the stated protocol.
   compatibility manifests, offline validation/stats, and a cache-only Stage 2
   loader. Real locked models and CUDA remain opt-in external gates; Milestone 7
   is active.
+- **2026-08-13:** Implemented Gloo/NCCL `torchrun` stage training, exact
+  mid-epoch multi-rank resume, final accumulation flush, precision and optimizer
+  policies, structured manifests/metrics, native detector/OCR sub-stages,
+  Stage 2 schedules, Stage 3 semantic/native boundaries, Stage 4 QAT/PTQ
+  comparison, and a real batch probe. Nineteen focused tests pass, including a
+  two-process CPU run and exact interrupted/resumed parity. CUDA, real public
+  weights, and native Ultralytics/docTR runs remain external gates; Milestone 8
+  is active.
 
 ## Discoveries and surprises
 
@@ -280,6 +288,12 @@ measurement under the stated protocol.
   cache to model/config/checkpoint/schema digests, reject command fields, and
   require complete validated shards in Stage 2. Short directory prefixes are
   collision-checked against full immutable digests for Windows portability.
+- **D-011 (training boundary):** Use exact-resume DDP for downstream stages,
+  native loss APIs for detector/OCR sub-stages, and separate model-only stage
+  initialization. Do not claim gradients across discrete NMS or OCR decoding.
+- **D-012 (quantization boundary):** Treat Stage 4 as per-channel weight QAT,
+  training-only activation observation, and same-data FP/PTQ/QAT comparison;
+  retain explicit unsupported operations and no unmeasured mobile claim.
 
 ## Validation ledger
 
@@ -341,13 +355,19 @@ measurement under the stated protocol.
 - **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 150
   Python files formatted, Ruff and Mypy passed, and 110 offline tests passed
   with eight opt-in network/GPU tests deselected.
+- **2026-08-13:** focused Milestone 7 training tests - exit 0; 19 engine,
+  checkpoint, DDP, exact-resume, batch-probe, stage, semantic, and quantization
+  tests passed. Ruff, Mypy, and formatting checks also passed.
+- **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 165
+  Python files formatted, Ruff and Mypy passed, and 122 offline tests passed
+  with eight opt-in network/GPU tests deselected.
 
 ## Remaining blockers and continuation
 
 Current host is CPU-oriented and no public data/model license acceptance was
-provided. Full downloads and GPU runs are intentionally excluded. The exact
-first GPU-machine command will be generated after the doctor, asset, data,
-cache, and stage-runner interfaces exist.
+provided. Full downloads and GPU runs are intentionally excluded. The first
+GPU-machine command is `screen2action doctor --device cuda --json`; subsequent
+immutable-input commands are recorded in `docs/GPU_RUNBOOK.md`.
 
 ## Outcome summary
 

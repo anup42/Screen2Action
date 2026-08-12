@@ -1,0 +1,15 @@
+extends: public_smoke_real_models.yaml
+schema_version: 1
+name: stage1_detector
+training:
+  stage: stage1_detector
+  epochs: 12
+  max_commands: null
+detector_native:
+  backend: ultralytics
+  image_size: 1280
+  workers: 4
+  generated_data_directory: null
+  extra_arguments: {}
+notes:
+  paper_boundary: Uses detector-native losses; no downstream gradient is claimed through NMS.

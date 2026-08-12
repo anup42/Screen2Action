@@ -8,16 +8,44 @@ pin one CUDA wheel URL.
 python -c "import torch; print(torch.__version__, torch.version.cuda)"
 python -m pip install -e .[perception,data,train,export,dev]
 screen2action doctor --device cuda --json
-screen2action train probe-batch --device cuda
 screen2action train smoke --device cuda
+```
+
+Resolve/fetch the model lock, build a frozen canonical data manifest, and
+precompute perception before Stage 2. Probe each selected stage against those
+real immutable inputs; the command performs an actual forward/backward pass
+and recommends accumulation for a global batch of 256:
+
+```text
+screen2action train probe-batch \
+  --stage stage2_selector_retrieval \
+  --manifest ${SCREEN2ACTION_DATA_ROOT}/normalized/public-v1/manifests/training.json \
+  --cache-manifest ${SCREEN2ACTION_CACHE_ROOT}/perception/<bundle>/manifest.json \
+  --model-lock configs/models/lock.json \
+  --config configs/experiments/stage2_selector_retrieval.yaml \
+  --device cuda --max-batch-size 64 --json
 ```
 
 For distributed runs, launch the same internal entry point through torchrun:
 
 ```text
 torchrun --standalone --nproc-per-node=2 -m screen2action.training.launch \
-  --config configs/experiments/paper_reference_stage2.yaml
+  --stage stage2_selector_retrieval \
+  --manifest ${SCREEN2ACTION_DATA_ROOT}/normalized/public-v1/manifests/training.json \
+  --cache-manifest ${SCREEN2ACTION_CACHE_ROOT}/perception/<bundle>/manifest.json \
+  --model-lock configs/models/lock.json \
+  --config configs/experiments/stage2_selector_retrieval.yaml \
+  --device cuda \
+  --run-dir ${SCREEN2ACTION_RUN_ROOT}/stage2-selector
 ```
+
+Initialize Stage 2 from the Stage 1 semantics artifact with
+`--init-checkpoint`; use `--resume .../checkpoints/latest.pt` only to continue
+the exact same stage lineage. Stage 1 detector and OCR configs invoke their
+native Ultralytics/docTR trainers and retain separate checkpoint families.
+Stage 3 keeps OCR frozen and, when enabled, alternates detector-native updates
+without claiming gradients through NMS. Stage 4 requires a Stage 3
+initialization or an exact Stage 4 resume.
 
 Perception precomputation is data-parallel without DDP collectives. Each
 `torchrun` process loads the locked perception bundle on its `LOCAL_RANK`, and
@@ -28,7 +56,7 @@ torchrun --standalone --nproc-per-node=2 -m screen2action \
   perception precompute \
   --manifest ${SCREEN2ACTION_DATA_ROOT}/normalized/public-v1/manifests/training.json \
   --model-lock configs/models/lock.json \
-  --visual-checkpoint ${SCREEN2ACTION_RUN_ROOT}/stage1_semantics_graph/best.pt \
+  --visual-checkpoint ${SCREEN2ACTION_RUN_ROOT}/stage1-semantics/checkpoints/visual-model.pt \
   --device cuda --batch-size 8 --json
 ```
 
@@ -44,3 +72,9 @@ sampler sharding, synchronized metrics, and rank-zero writes before scaling.
 Record GPU names/capabilities, PyTorch/CUDA/NCCL versions, free/total VRAM,
 resolved digests, command, and checkpoint in the handoff. A CPU-only host must
 leave CUDA gates unverified, not failed or silently emulated.
+
+The first external-machine command after installing dependencies is:
+
+```text
+screen2action doctor --device cuda --json
+```

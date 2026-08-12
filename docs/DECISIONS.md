@@ -286,3 +286,56 @@ carry bounded error text and monotonically increasing attempts; abandoned
 short-lived locks and old atomic-write temporaries have scoped cache-only
 recovery. Stage 2 loads completed cache entries through a module that does not
 import or instantiate ScreenParser or docTR.
+
+## ADR-0022: Exact-resume distributed stage runner
+
+**Status:** accepted for the public reconstruction.
+
+Stage training is launched through `torchrun` and uses Gloo on CPU or NCCL on
+CUDA. Each rank owns a deterministically seeded, same-screen batch shard. DDP
+gradient synchronization is deferred with `no_sync` during accumulation, and
+the last partial accumulation window is scaled and flushed instead of dropped.
+Validation totals, loss components, and example counts are reduced directly;
+rank zero alone writes manifests, metrics, and atomic latest/best checkpoints.
+
+A resume checkpoint binds config, data manifest, model lock, perception cache,
+and run-manifest digests. It records the next batch, optimizer/scheduler/scaler
+state, sampler epoch, and every rank's Python, Torch, CUDA, and optional NumPy
+RNG state. A mismatched lineage fails explicitly. Model-only initialization is
+separate from exact resume so stage transitions cannot be mistaken for a
+continuation of optimizer or sampler state.
+
+## ADR-0023: Native perception training boundaries
+
+**Status:** accepted for the public reconstruction.
+
+The default Stage 1 path trains source-supervised MobileNetV3 icon and
+actionability heads, node projection, and relation GAT from tight source crops.
+Optional detector and OCR modes delegate to Ultralytics-native YOLO losses and
+docTR-native CRNN CTC loss, respectively, and keep separate checkpoint
+lineages. Stage 1 full is an orchestrator over those independently auditable
+sub-stages.
+
+Stage 2 consumes frozen command-independent perception caches. Stage 3 adds a
+weighted differentiable semantic branch while OCR remains frozen. Optional
+detector fine-tuning alternates a detector-native update branch with downstream
+updates. No downstream gradient is claimed through detector proposal/NMS or
+OCR text decoding. A trained Stage 1 visual-head artifact is loaded explicitly
+by perception precomputation rather than inferred from a general checkpoint.
+
+## ADR-0024: Bounded Stage 4 quantization reconstruction
+
+**Status:** accepted for the optional CPU/GPU training interface.
+
+Stage 4 inserts symmetric int8 fake quantization with per-output-channel
+weights for supported linear and convolution layers. It observes activation
+ranges on training-only representative batches, inventories unsupported
+subgraphs, and compares FP32, weight-only PTQ, and fake-quant QAT on the same
+checkpoint and validation batches. Multi-head attention and transformer
+container internals remain explicit unsupported boundaries when direct module
+replacement would alter their public parameter access contract.
+
+The activation observations are evidence and calibration metadata, not a
+claim that an integer activation runtime was exported. PTQ is labeled
+weight-only, and no mobile latency/runtime claim is permitted until a named
+backend and device have been measured.

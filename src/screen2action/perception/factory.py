@@ -124,7 +124,15 @@ def _checkpoint_state(payload: object) -> Mapping[str, Any]:
     if not isinstance(payload, dict) or not all(isinstance(key, str) for key in payload):
         raise ValueError("visual checkpoint state keys must be strings")
     state = cast(dict[str, Any], payload)
-    prefixes = ("visual_model.", "perception.visual_model.", "module.visual_model.")
+    prefixes = (
+        "visual_model.",
+        "visual.",
+        "perception.visual_model.",
+        "module.visual_model.",
+        "module.visual.",
+        "semantics.visual.",
+        "module.semantics.visual.",
+    )
     for prefix in prefixes:
         selected = {
             key.removeprefix(prefix): value

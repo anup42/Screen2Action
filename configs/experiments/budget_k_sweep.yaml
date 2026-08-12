@@ -1,0 +1,11 @@
+schema_version: 1
+name: budget_k_sweep
+device: cuda_optional
+evaluation:
+  split: test
+  budgets: [128, 256, 384, 512, 768]
+  retrieval_top_k: [1, 2, 4, 8, 16]
+  ablations:
+    selector: [learned, no_pruning, random_budget_matched]
+    relations: [all, no_ordinal, no_proximity, none]
+  emit_per_example: true

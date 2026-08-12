@@ -1,0 +1,9 @@
+extends: public_smoke_real_models.yaml
+schema_version: 1
+name: stage2_selector_retrieval
+training:
+  stage: stage2_selector_retrieval
+  epochs: 8
+  max_commands: null
+  frozen_crop_warmup_epochs: 1
+  forced_positive_probability_first_two_epochs: 0.5
