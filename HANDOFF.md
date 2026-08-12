@@ -5,8 +5,8 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: Milestone 4 - unified trainable paper-reference model
-- Git branch/commit: `main` / `a97f3a73507b5da4e3617677d35d930560af659d`
+- Active milestone: Milestone 5 - canonical data lake and audits
+- Git branch/commit: `main` / `aaeb0ea698713f4aa1096abe35faf72e96a9dfd0`
 - Source dirty at snapshot: `false`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
@@ -20,6 +20,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - Milestone 1 - typed configuration, CLI, and environment diagnostics
 - Milestone 2 - model registry and reproducible assets
 - Milestone 3 - production perception and taxonomy
+- Milestone 4 - unified trainable paper-reference model
 
 ## Exact continuation commands
 
@@ -33,6 +34,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - `python -m pytest tests/unit/test_handoff.py -q`
 - `python -m screen2action.tools.verify all`
 - `screen2action doctor --device cpu --json`
+- `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
