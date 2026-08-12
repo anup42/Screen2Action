@@ -242,6 +242,13 @@ def _parser() -> argparse.ArgumentParser:
     icon_inspect.add_argument(
         "--taxonomy", type=Path, default=Path("configs/data/icon_classes.yaml")
     )
+    icon_inspect.add_argument(
+        "--input",
+        type=Path,
+        action="append",
+        default=[],
+        help="repeatable licensed label-count JSON/YAML/CSV input",
+    )
     _add_json(icon_inspect)
     icon_build = _leaf(
         icon_commands,
@@ -249,7 +256,7 @@ def _parser() -> argparse.ArgumentParser:
         "build a deterministic candidate taxonomy",
         "taxonomy icons build",
     )
-    icon_build.add_argument("--input", type=Path, required=True)
+    icon_build.add_argument("--input", type=Path, action="append", required=True)
     icon_build.add_argument("--output", type=Path, required=True)
     icon_build.add_argument("--count", type=int, default=87)
     _add_dry_run(icon_build)
@@ -262,6 +269,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     icon_freeze.add_argument("--input", type=Path, required=True)
     icon_freeze.add_argument("--output", type=Path, required=True)
+    icon_freeze.add_argument("--count", type=int, default=87)
+    icon_freeze.add_argument("--accept-reconstruction", action="store_true")
+    icon_freeze.add_argument("--reviewer", default="cli-operator")
     _add_dry_run(icon_freeze)
     _add_json(icon_freeze)
 
@@ -423,6 +433,13 @@ def _run_read_only(args: argparse.Namespace) -> dict[str, Any] | None:
             "sources": sources,
         }
     if args.command_path == "taxonomy icons inspect":
+        if args.input:
+            from screen2action.perception.taxonomy import (
+                inspect_icon_taxonomy,
+                load_label_observations,
+            )
+
+            return inspect_icon_taxonomy(load_label_observations(args.input))
         taxonomy = _load_yaml_mapping(args.taxonomy)
         classes = taxonomy.get("classes", [])
         return {
@@ -520,6 +537,46 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
             cache_root,
             registry_path=args.registry,
         )
+    if args.command_path == "taxonomy icons build" and not args.dry_run:
+        from screen2action.perception.taxonomy import (
+            build_icon_taxonomy,
+            inspect_icon_taxonomy,
+            load_label_observations,
+            write_taxonomy,
+        )
+
+        observations = load_label_observations(args.input)
+        proposal = build_icon_taxonomy(observations, expected_count=args.count)
+        write_taxonomy(proposal, args.output)
+        review = inspect_icon_taxonomy(observations)
+        review_path = args.output.with_suffix(args.output.suffix + ".review.json")
+        review_path.write_text(
+            json.dumps(review, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        return {
+            "status": proposal["status"],
+            "output": args.output.as_posix(),
+            "review_report": review_path.as_posix(),
+            "observed_count": proposal["observed_count"],
+            "expected_count": proposal["expected_count"],
+        }
+    if args.command_path == "taxonomy icons freeze" and not args.dry_run:
+        from screen2action.perception.taxonomy import freeze_icon_taxonomy, write_taxonomy
+
+        proposal = _load_yaml_mapping(args.input)
+        frozen = freeze_icon_taxonomy(
+            proposal,
+            expected_count=args.count,
+            accept_reconstruction=args.accept_reconstruction,
+            reviewer=args.reviewer,
+        )
+        write_taxonomy(frozen, args.output)
+        return {
+            "status": frozen["status"],
+            "output": args.output.as_posix(),
+            "count": frozen["count"],
+            "digest": frozen["digest"],
+        }
     if getattr(args, "dry_run", False):
         if getattr(args, "config", None) is not None:
             config = load_config(args.config, overrides=getattr(args, "overrides", ()))

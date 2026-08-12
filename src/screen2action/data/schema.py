@@ -174,6 +174,7 @@ class NodeRecord:
     icon_probabilities: tuple[float, ...] = ()
     icon_confidence: float = 0.0
     roi_visual_feature: tuple[float, ...] = ()
+    visual_feature_confidence: float = 0.0
     actionability_logits: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
     hierarchy_depth: int = 0
     parent_id: int | None = None
@@ -182,6 +183,8 @@ class NodeRecord:
     is_scroll_container: bool = False
     retention_score: float | None = None
     actionability_mask: tuple[bool, bool, bool, bool] = (True, True, True, True)
+    annotation_source: str = "unknown"
+    provenance: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.node_id < 0:
@@ -192,6 +195,7 @@ class NodeRecord:
             ("detector_confidence", self.detector_confidence),
             ("ocr_confidence", self.ocr_confidence),
             ("icon_confidence", self.icon_confidence),
+            ("visual_feature_confidence", self.visual_feature_confidence),
         ):
             _require_finite(value, field_name)
             if not 0.0 <= value <= 1.0:
@@ -204,6 +208,13 @@ class NodeRecord:
             raise ValueError("actionability_logits must contain four values")
         if len(self.actionability_mask) != 4:
             raise ValueError("actionability_mask must contain four values")
+        if not self.annotation_source:
+            raise ValueError("annotation_source cannot be empty")
+        if not all(
+            isinstance(key, str) and isinstance(value, str)
+            for key, value in self.provenance.items()
+        ):
+            raise ValueError("provenance must be string-to-string")
         if any(token_id < 0 for token_id in self.text_token_ids):
             raise ValueError("text_token_ids must be non-negative")
         if any(

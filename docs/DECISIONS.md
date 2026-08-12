@@ -174,3 +174,27 @@ the same lock so interrupted bundles resume safely. A lock is experiment-ready
 only when every selected role is complete and offline verification passes.
 The MobileViT weight card's non-SPDX `other` license is preserved as
 `LicenseRef-Apple-ML-CVNets`, not normalized to Apache-2.0.
+
+## ADR-0018: Auditable production-perception reconstruction
+
+**Status:** accepted.
+
+ScreenParser's 55 public classes map through
+`screenparser_55_to_ssb_v1`; original IDs, names, detector features, and
+letterbox metadata remain separate from the coarse SSB type. The detector
+supplies only a synthetic full-screen root plus leaf evidence. Optional aligned
+child containers are explicitly labeled `reconstruction_policy` with a policy
+version and confidence; they are not represented as model hierarchy output.
+
+docTR uses locked `crnn_vgg16_bn` state with recognition-only crops normalized
+by `doctr_crnn_rgb_h32_aspect_v1`. OCR may label its source node and one
+smallest enclosing control; conflicts use highest confidence then source ID.
+The MobileNetV3-small reconstruction shares one backbone across 87 icon logits,
+four independent actionability logits, and a 256-D projection. Its custom heads
+remain untrained until a reviewed taxonomy and public data are available.
+
+Perception is command-independent and cached by screenshot, model-bundle,
+perception-config, and schema digests. Cache files are sharded and atomically
+replaced under cross-process locks. NumPy and Pillow are explicit perception
+extras because the public input boundary supports their arrays/images and the
+public adapters require those conversions; they are not core dependencies.

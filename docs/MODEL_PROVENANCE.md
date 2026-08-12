@@ -57,3 +57,12 @@ The tiny transformer/CNN modules used by offline tests are reconstruction test
 models, not substitutes for public-model accuracy. A successful mocked or tiny
 test establishes API/shape behavior only. Real-model smoke evidence is
 reported separately with lock digest, dependency versions, device, and command.
+
+The concrete perception adapters load only caller-selected locked files. The
+ScreenParser adapter validates the public 55-class contract and records
+original IDs/names; the docTR adapter reconstructs the recognition predictor
+with `pretrained=False` before loading the state dictionary previously
+materialized from `crnn_vgg16_bn(pretrained=True)` by the asset provider. The
+MobileNetV3 adapter likewise reconstructs `weights=None` and loads the locked
+TorchVision state. This avoids implicit downloads while preserving the exact
+download provenance in the model lock.

@@ -49,6 +49,14 @@ digests. Checkpoints bind configuration, data manifest, Git revision, stage,
 optimizer/scheduler/scaler/RNG/sampler state. `handoff.json` inventories all of
 these without exposing credentials or machine-local paths.
 
+The production perception service normalizes tensor, PIL, NumPy, and path
+inputs once, deduplicates identical screenshot hashes, batches only cache
+misses, and emits reusable `PerceptionFrame` records. ScreenParser original
+classes and preprocessing evidence survive coarse type mapping. OCR assignments
+and any reconstructed containers carry auditable policy provenance. `oracle`,
+`real`, and `cached` modes share the same downstream node/edge schema and never
+accept command text.
+
 ## Export boundary
 
 Host code retains image decoding, detector/OCR postprocessing, graph

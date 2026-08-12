@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 3 - production perception and taxonomy
+**Active milestone:** Milestone 4 - unified trainable paper-reference model
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -98,18 +98,19 @@ measurement under the stated protocol.
       relevant to asset resolution/fetch.
 - [x] Full offline verification and checkpoint prepared.
 
-### Milestone 3 - production perception and taxonomy (IN PROGRESS)
+### Milestone 3 - production perception and taxonomy (COMPLETE)
 
-- [ ] Typed detector/OCR/text-detector protocols and normalized image boundary.
-- [ ] ScreenParser conversion/class mapping/diagnostics/root/container policy.
-- [ ] docTR CRNN crop normalization, aspect batching, ordering, diagnostics,
+- [x] Typed detector/OCR/text-detector protocols and normalized image boundary.
+- [x] ScreenParser conversion/class mapping/diagnostics/root/container policy.
+- [x] docTR CRNN crop normalization, aspect batching, ordering, diagnostics,
       and deterministic OCR association.
-- [ ] Shared MobileNetV3 icon/actionability/visual module with masked losses.
-- [ ] Inspect/build/freeze icon taxonomy workflow with immutable 87-class
+- [x] Shared MobileNetV3 icon/actionability/visual module with masked losses.
+- [x] Inspect/build/freeze icon taxonomy workflow with immutable 87-class
       reconstruction manifest and review report.
-- [ ] Command-independent real/oracle/cached `FullScreenPerception`.
-- [ ] Atomic, sharded, content-addressed perception cache with retries.
-- [ ] Offline fake-backbone/cache tests and opt-in real-model tests.
+- [x] Command-independent real/oracle/cached `FullScreenPerception`.
+- [x] Atomic, sharded, content-addressed perception cache with retries.
+- [x] Offline fake-backbone/cache tests; real-model execution remains an
+      explicitly unverified external gate.
 
 ### Milestone 4 - unified trainable paper-reference model
 
@@ -205,6 +206,11 @@ measurement under the stated protocol.
   atomic per-role lock finalization, and strict offline SHA256 verification.
   Official cards corrected ScreenParser to Apache-2.0 and MobileViT to its
   linked Apple license reference. Milestone 3 is active.
+- **2026-08-12:** Added typed ScreenParser/docTR/shared-MobileNet adapters,
+  deterministic OCR association, an explicit reviewed taxonomy workflow,
+  command-independent real/oracle/cached orchestration, and an atomic sharded
+  multi-worker cache. Sixteen focused tests passed, including a Windows lock
+  race. Real public weights remain unfetched and therefore unclaimed.
 
 ## Discoveries and surprises
 
@@ -239,6 +245,10 @@ measurement under the stated protocol.
 - **D-006 (asset lock):** Resolve mutable Hub/package intent first, then
   finalize local sizes/SHA256 after license-gated fetch. Preserve non-SPDX
   upstream license terms instead of normalizing them to a convenient license.
+- **D-007 (perception truth boundary):** Preserve original detector semantics
+  beside coarse SSB types. Label generated containers as reconstruction,
+  propagate OCR to at most one enclosing control, and cache only
+  command-independent frame state.
 
 ## Validation ledger
 
@@ -278,6 +288,11 @@ measurement under the stated protocol.
 - **2026-08-12:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
   Mypy, formatting/compilation, and 54 offline tests passed; one network test
   was deselected as intended.
+- **2026-08-12:** focused Milestone 3 tests - exit 0; 16 detector/OCR/model,
+  taxonomy, concurrent-cache, and full-perception tests passed.
+- **2026-08-12:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
+  Mypy, formatting/compilation, and 70 offline tests passed; three opt-in real
+  model/network/GPU tests were deselected as intended.
 
 ## Remaining blockers and continuation
 

@@ -33,7 +33,7 @@ no qualifying implementation evidence exists.
 | S2A-022 | resumable handoff/provenance/runbooks | complete | partial | partial | partial |
 | S2A-023 | unified CLI/config/doctor | complete | partial | partial | partial |
 | S2A-024 | model registry/lock/fetch/verify | complete | partial | partial | partial |
-| S2A-025 | public production perception/taxonomy/cache | not-started | not-started | not-started | not-started |
+| S2A-025 | public production perception/taxonomy/cache: typed adapters, fake-backed integration tests | complete | partial | partial | host-only |
 | S2A-026 | unified paper-reference trainable model | not-started | not-started | not-started | not-started |
 | S2A-027 | public data lake/source adapters/manifest/shards | not-started | not-started | not-started | n/a |
 | S2A-028 | resumable production perception precompute | not-started | not-started | not-started | n/a |
