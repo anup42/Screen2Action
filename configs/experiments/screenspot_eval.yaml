@@ -1,12 +1,22 @@
+extends: public_smoke_real_models.yaml
 schema_version: 1
 name: screenspot_eval
 device: cuda_optional
 evaluation:
+  mode: single
   source: screenspot
   split: test
+  batch_size: 1
+  proposal_iou_threshold: 0.5
   direct_cascade: true
   emit_per_example: true
-  confidence_calibration_split: val
-  thresholds: [0.25, 0.5, 0.75]
-  budgets: [256, 512]
-  retrieval_top_k: [4, 8]
+  confidence_calibration: external_validation_artifact_only
+  budgets: [512]
+  retrieval_top_k: [8]
+  selector_variant: learned
+  graph_relations: all
+  relation_reranking: true
+  quantization_variant: fp32
+notes:
+  benchmark_rule: Inclusive predicted-point-in-official-target-box.
+  leakage_boundary: ScreenSpot is test-only and forbidden for training or calibration.

@@ -37,6 +37,11 @@ configs cover Stage 1 semantic/native perception, Stage 2 cached selection and
 grounding, Stage 3 joint reconstruction, and optional Stage 4 QAT. See
 `docs/GPU_RUNBOOK.md` for the immutable-input and exact-resume workflow.
 
+Checkpoint evaluation uses the same frozen data and perception manifests and
+emits JSON metrics, CSV/Parquet predictions, Markdown, resolved config, and
+provenance. Confidence calibration is a separate validation-only command;
+ScreenSpot is rejected from calibration. See `docs/EVALUATION_RUNBOOK.md`.
+
 Configuration supports recursive `extends`, `${ENV_VAR}` or
 `${ENV_VAR:-default}` expansion, repeatable `--set dotted.key=value`
 overrides, schema validation, and resolved snapshots in run directories.

@@ -339,3 +339,26 @@ The activation observations are evidence and calibration metadata, not a
 claim that an integer activation runtime was exported. PTQ is labeled
 weight-only, and no mobile latency/runtime claim is permitted until a named
 backend and device have been measured.
+
+## ADR-0025: Direct evaluation, held-out calibration, and ablation lineage
+
+**Status:** accepted for the public reconstruction.
+
+Evaluation persists one typed row per command and derives every cascade metric
+from those rows. Target proposal match, conditional target/reference survival,
+retrieval at each K, candidate choice, final screen point, action, confidence,
+latency, and failure reason are observed independently. Cascade rates are never
+multiplied as if stages were statistically independent. ScreenSpot uses its
+official inclusive point-in-target rule and preserves platform and target-type
+subsets; the data and evaluation loaders reject any non-test ScreenSpot use.
+
+Temperature and selective-risk threshold fitting accept only `val` rows from a
+non-ScreenSpot evaluation package. Separate artifacts bind the source
+predictions, validation manifest, and checkpoint SHA256. Test evaluation may
+consume those artifacts but cannot refit them.
+
+B/K, selector, relation, graph-equation, visual, and quantization variants each
+write an independent artifact directory. Training-loss ablations and QAT
+require separately named checkpoints; the runner reports a missing lineage
+instead of reusing the baseline and inventing an ablation result. ROIAlign Fast
+is optional and currently reported as unsupported, with no substituted metric.

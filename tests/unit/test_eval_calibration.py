@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
-from screen2action.eval.calibration import calibration_metrics, fit_temperature, risk_coverage
+from screen2action.eval.calibration import (
+    calibration_metrics,
+    fit_temperature,
+    fit_threshold_policy,
+    risk_coverage,
+)
 from screen2action.eval.latency import peak_python_memory
 from screen2action.eval.metrics import (
     action_parameter_error,
@@ -43,3 +49,14 @@ def test_metrics_are_direct_and_calibration_is_finite() -> None:
     assert action_parameter_error(((1.0, 0.0),), ((0.0, 0.5),), ((True, False),)) == 1.0
     result, peak = peak_python_memory(lambda: [0] * 10)
     assert len(result) == 10 and peak > 0
+
+
+def test_threshold_policy_respects_equal_confidence_groups() -> None:
+    policy = fit_threshold_policy(
+        torch.tensor([0.9, 0.8, 0.8, 0.1]),
+        torch.tensor([True, True, False, False]),
+        target_risk=0.34,
+    )
+    assert policy.threshold == pytest.approx(0.8)
+    assert policy.accepted == 3
+    assert policy.coverage == 0.75

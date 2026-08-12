@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 8 - evaluation, calibration, sweeps, and reports
+**Active milestone:** Milestone 9 - partitioned export/runtime
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -162,14 +162,14 @@ measurement under the stated protocol.
 - [x] JSONL/TensorBoard/run-manifest timing/throughput/VRAM/ETA reporting.
 - [x] CPU smoke, batch probe, one-process and supported two-process tests.
 
-### Milestone 8 - evaluation, calibration, sweeps, and reports
+### Milestone 8 - evaluation, calibration, sweeps, and reports (COMPLETE)
 
-- [ ] ScreenSpot evaluation-only adapter and official point-in-target path.
-- [ ] Direct cascade/subset/action/confidence/latency/memory/failure metrics.
-- [ ] Per-example CSV/Parquet, JSON metrics, Markdown report, and provenance.
-- [ ] Validation-only temperature/threshold artifacts tied to digests.
-- [ ] B/K, selector/loss/relation/model/quantization ablations from config.
-- [ ] Offline report/calibration/leakage tests.
+- [x] ScreenSpot evaluation-only adapter and official point-in-target path.
+- [x] Direct cascade/subset/action/confidence/latency/memory/failure metrics.
+- [x] Per-example CSV/Parquet, JSON metrics, Markdown report, and provenance.
+- [x] Validation-only temperature/threshold artifacts tied to digests.
+- [x] B/K, selector/loss/relation/model/quantization ablations from config.
+- [x] Offline report/calibration/leakage tests.
 
 ### Milestone 9 - partitioned export/runtime
 
@@ -237,6 +237,13 @@ measurement under the stated protocol.
   two-process CPU run and exact interrupted/resumed parity. CUDA, real public
   weights, and native Ultralytics/docTR runs remain external gates; Milestone 8
   is active.
+- **2026-08-13:** Added manifest-bound direct cascade evaluation, official
+  ScreenSpot point scoring and leakage enforcement, platform/target subsets,
+  action/confidence/latency/memory/failure metrics, complete report packages,
+  validation-only linked calibration, and the required B/K/ablation matrix.
+  Training-loss/QAT jobs require distinct checkpoints and optional ROIAlign
+  Fast remains explicitly unsupported. Eighteen focused tests pass; Milestone 9
+  is active.
 
 ## Discoveries and surprises
 
@@ -294,6 +301,10 @@ measurement under the stated protocol.
 - **D-012 (quantization boundary):** Treat Stage 4 as per-channel weight QAT,
   training-only activation observation, and same-data FP/PTQ/QAT comparison;
   retain explicit unsupported operations and no unmeasured mobile claim.
+- **D-013 (evaluation truth boundary):** Aggregate typed per-command cascade
+  observations directly; fit calibration only on held-out non-ScreenSpot
+  validation rows; and require distinct checkpoint lineages for training-loss
+  and QAT ablations instead of relabeling a baseline result.
 
 ## Validation ledger
 
@@ -360,6 +371,12 @@ measurement under the stated protocol.
   tests passed. Ruff, Mypy, and formatting checks also passed.
 - **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 165
   Python files formatted, Ruff and Mypy passed, and 122 offline tests passed
+  with eight opt-in network/GPU tests deselected.
+- **2026-08-13:** focused Milestone 8 evaluation tests - exit 0; 18 direct
+  evaluation, ScreenSpot protocol, calibration-lineage, report, sweep, CLI,
+  and ablation-path tests passed. Ruff and Mypy also passed.
+- **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 172
+  Python files formatted, Ruff and Mypy passed, and 128 offline tests passed
   with eight opt-in network/GPU tests deselected.
 
 ## Remaining blockers and continuation

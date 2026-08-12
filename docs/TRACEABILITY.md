@@ -25,8 +25,8 @@ no qualifying implementation evidence exists.
 | S2A-014 | seven fixture-backed public adapters plus retained synthetic framework and exact reject audits | complete | partial | partial | n/a |
 | S2A-015 | oracle perception interface boundary | complete | not-started | not-started | not-started |
 | S2A-016 | exact-resume stage runner/checkpoint/distributed helpers | complete | partial | partial | n/a |
-| S2A-017 | metric/sweep/timing primitives | complete | partial | not-started | n/a |
-| S2A-018 | confidence calibration primitive | complete | partial | not-started | n/a |
+| S2A-017 | direct cascade/subset/action/structure/latency/failure metrics and auditable sweep runner | complete | partial | partial | n/a |
+| S2A-018 | validation-only linked temperature and risk-threshold artifacts | complete | partial | partial | n/a |
 | S2A-019 | fixed-shape tiny ONNX export and ONNXRuntime parity | complete | not-started | not-started | partial |
 | S2A-020 | train-only calibration, per-channel QAT/weight-only PTQ comparison and unsupported-op inventory | complete | partial | partial | not-started |
 | S2A-021 | structured runtime logging/toy duplicate diagnostics | complete | partial | partial | partial |
@@ -38,7 +38,7 @@ no qualifying implementation evidence exists.
 | S2A-027 | immutable source acquisition, seven adapters, app split, scalable dedup, weak references, manifest enforcement, deterministic shards | complete | partial | partial | n/a |
 | S2A-028 | unique-screen hash sharding, atomic resume/retry, raw/final cache evidence, validation/stats, cache-only Stage-2 loader | complete | partial | partial | host-only |
 | S2A-029 | torchrun Gloo/NCCL runner, four stages, native branches, exact resume, structured artifacts | complete | partial | partial | n/a |
-| S2A-030 | production evaluation/calibration/reporting | not-started | not-started | not-started | n/a |
+| S2A-030 | manifest/checkpoint/cache-bound evaluation with JSON, CSV, Parquet, Markdown, provenance and ScreenSpot guard | complete | partial | partial | n/a |
 | S2A-031 | four-partition paper-reference export/runtime | not-started | not-started | not-started | not-started |
 
 `host-only` means the operation is deliberately outside a neural export graph.
@@ -68,5 +68,7 @@ paths are exercised; no status is inferred from architecture-only tests.
 | Stage 1 semantic default and native detector/OCR branches | reconstruction ADR-0023 | experiment configs, `training/semantics.py`, `detector_native.py`, `ocr_native.py` |
 | Exact DDP resume and final accumulation flush | reconstruction ADR-0022 | `training/runner.py`, `engine.py`, checkpoint and two-process tests |
 | per-channel QAT plus weight-only PTQ comparison | reconstruction ADR-0024 | `training/quantization.py`, Stage 4 integration tests |
+| direct cascade and validation-only calibration | reconstruction ADR-0025 | `eval/runner.py`, `reporting.py`, evaluation integration tests |
+| B/K and named ablation lineage | reconstruction ADR-0025 | `eval/sweep_runner.py`, `configs/experiments/budget_k_sweep.yaml` |
 | public model IDs and initial detector thresholds | supplied reconstruction | `configs/models/registry.yaml`, `MODEL_PROVENANCE.md` |
 | public source revisions, license notes, and conversion boundaries | upstream evidence plus reconstruction | `configs/data/sources.yaml`, `DATASET_RUNBOOK.md`, ADR-0020 |

@@ -1,11 +1,34 @@
+extends: screenspot_eval.yaml
 schema_version: 1
 name: budget_k_sweep
 device: cuda_optional
 evaluation:
+  mode: sweep
+  source: screenspot
   split: test
-  budgets: [128, 256, 384, 512, 768]
-  retrieval_top_k: [1, 2, 4, 8, 16]
+  budgets: [128, 256, 512]
+  retrieval_top_k: [4, 8, 16]
   ablations:
-    selector: [learned, no_pruning, random_budget_matched]
-    relations: [all, no_ordinal, no_proximity, none]
+    - learned_selector
+    - confidence_only_selector
+    - no_target_survival_loss
+    - no_reference_survival_loss
+    - no_budget_loss
+    - no_relation_reranking
+    - no_graph_relations
+    - paper_equation_graph_reranker
+    - cpu_reconstruction_graph_reranker
+    - mobilevit_accurate
+    - roi_align_fast
+    - quantization_fp32
+    - quantization_ptq_weight_only
+    - quantization_qat_fake_quant
+  checkpoint_variants:
+    no_target_survival_loss: ${SCREEN2ACTION_RUN_ROOT:-runs}/ablations/no-target/best.pt
+    no_reference_survival_loss: ${SCREEN2ACTION_RUN_ROOT:-runs}/ablations/no-reference/best.pt
+    no_budget_loss: ${SCREEN2ACTION_RUN_ROOT:-runs}/ablations/no-budget/best.pt
+    quantization_qat_fake_quant: ${SCREEN2ACTION_RUN_ROOT:-runs}/stage4-qat/best.pt
   emit_per_example: true
+notes:
+  checkpoint_boundary: Training-loss and QAT ablations require distinct configured checkpoints.
+  optional_boundary: ROIAlign Fast remains explicitly unsupported until implemented and exported.

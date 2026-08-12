@@ -320,12 +320,18 @@ class Screen2ActionModel(nn.Module):
         screenshots: Sequence[object] = (),
         stochastic_selector: bool = False,
         selector_temperature: float | None = None,
+        selector_variant: str = "learned",
+        graph_relations: str = "all",
         generator: torch.Generator | None = None,
     ) -> EncodedFrameBatch:
         """Encode each unique frame once and pad nodes/edges with explicit masks."""
 
         if not perceived_frames:
             raise ValueError("encode_frames requires at least one perceived frame")
+        if selector_variant not in {"learned", "confidence_only"}:
+            raise ValueError("selector_variant must be learned or confidence_only")
+        if graph_relations not in {"all", "none", "no_ordinal", "no_proximity"}:
+            raise ValueError("graph_relations must be all, none, no_ordinal, or no_proximity")
         if screenshots and len(screenshots) != len(perceived_frames):
             raise ValueError("screenshot count must match perceived frame count")
         frame_records = tuple(
@@ -358,6 +364,7 @@ class Screen2ActionModel(nn.Module):
             (screen_count, max_nodes), dtype=torch.float32, device=self.device
         )
         positioned_edges: list[tuple[EdgeRecord, ...]] = []
+        selection_edges: list[tuple[EdgeRecord, ...]] = []
         for screen_index, (frame, nodes) in enumerate(
             zip(perceived_frames, frame_records, strict=True)
         ):
@@ -380,7 +387,15 @@ class Screen2ActionModel(nn.Module):
             )
             valid_text[screen_index, :node_count] = node_batch.text_mask
             node_states = self.node_encoder(node_batch)
-            local_edges = _position_edges(frame.edges, nodes)
+            source_edges = tuple(
+                edge
+                for edge in frame.edges
+                if graph_relations == "all"
+                or (graph_relations == "no_ordinal" and edge.relation.value != "ordinal")
+                or (graph_relations == "no_proximity" and edge.relation.value != "proximity")
+            )
+            selection_edges.append(source_edges)
+            local_edges = _position_edges(source_edges, nodes)
             positioned_edges.append(local_edges)
             edge_index, relation_ids, geometry = edge_tensors(local_edges, device=self.device)
             node_states = self.graph_encoder(
@@ -417,16 +432,20 @@ class Screen2ActionModel(nn.Module):
             selections = [None] * screen_count
         else:
             selection_weights.zero_()
-            for screen_index, (frame, nodes) in enumerate(
-                zip(perceived_frames, frame_records, strict=True)
+            for screen_index, (source_edges, nodes) in enumerate(
+                zip(selection_edges, frame_records, strict=True)
             ):
-                values = {
-                    node.node_id: float(retention.scores[screen_index, index].detach().cpu())
-                    for index, node in enumerate(nodes)
-                }
+                values = (
+                    {node.node_id: node.detector_confidence for node in nodes}
+                    if selector_variant == "confidence_only"
+                    else {
+                        node.node_id: float(retention.scores[screen_index, index].detach().cpu())
+                        for index, node in enumerate(nodes)
+                    }
+                )
                 selection = budget_select(
                     nodes,
-                    frame.edges,
+                    source_edges,
                     budget=self.config.ssb_budget,
                     values=values,
                 )
@@ -481,6 +500,7 @@ class Screen2ActionModel(nn.Module):
         command_batch: CommandBatch,
         *,
         forced_positive_probability: float = 0.0,
+        relation_reranking: bool = True,
         generator: torch.Generator | None = None,
     ) -> GroundCommandOutput:
         """Fan command retrieval/crops/grounding out from reusable frame states."""
@@ -511,11 +531,15 @@ class Screen2ActionModel(nn.Module):
             features = encoded_frames.node_states[screen_index, :node_count]
             selected_mask = encoded_frames.selected_node_mask[screen_index, :node_count]
             base = self.retriever(command_encoding.pooled[command_index], features)
-            reranked = self.reranker(
-                base,
-                features,
-                encoded_frames.edges[screen_index],
-                selected_mask,
+            reranked = (
+                self.reranker(
+                    base,
+                    features,
+                    encoded_frames.edges[screen_index],
+                    selected_mask,
+                )
+                if relation_reranking
+                else base.masked_fill(~selected_mask, -1e9)
             )
             requested_action = (
                 int(command_batch.action_types[command_index])

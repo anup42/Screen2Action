@@ -43,6 +43,12 @@ def standard_ablations(
         "no_budget_loss",
         "no_relation_reranking",
         "no_graph_relations",
-        "dense_no_ssb_baseline",
+        "paper_equation_graph_reranker",
+        "cpu_reconstruction_graph_reranker",
+        "mobilevit_accurate",
+        "roi_align_fast",
+        "quantization_fp32",
+        "quantization_ptq_weight_only",
+        "quantization_qat_fake_quant",
     )
     return tuple(SweepResult({"ablation": name}, evaluate(name)) for name in names)

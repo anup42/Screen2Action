@@ -384,8 +384,15 @@ def _parser() -> argparse.ArgumentParser:
     evaluate = _leaf(groups, "evaluate", "evaluate a frozen checkpoint", "evaluate")
     evaluate.add_argument("--checkpoint", type=Path)
     evaluate.add_argument("--manifest", type=Path)
+    evaluate.add_argument("--cache-manifest", type=Path)
+    evaluate.add_argument("--model-lock", type=Path, default=Path("configs/models/lock.json"))
+    evaluate.add_argument("--cache-root", type=Path)
     evaluate.add_argument("--output", type=Path)
     evaluate.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    evaluate.add_argument("--split", choices=("train", "val", "test"))
+    evaluate.add_argument("--max-commands", type=int)
+    evaluate.add_argument("--calibration", type=Path)
+    evaluate.add_argument("--sweep", action="store_true")
     _add_config(evaluate, default="configs/eval/default.yaml")
     _add_dry_run(evaluate)
     _add_json(evaluate)
@@ -393,7 +400,13 @@ def _parser() -> argparse.ArgumentParser:
     calibrate = _leaf(groups, "calibrate", "fit validation-only calibration", "calibrate")
     calibrate.add_argument("--predictions", type=Path)
     calibrate.add_argument("--output", type=Path)
-    calibrate.add_argument("--method", choices=("temperature", "threshold"), default="temperature")
+    calibrate.add_argument(
+        "--method",
+        choices=("both", "temperature", "threshold"),
+        default="both",
+        help="both linked artifacts are emitted; this records the primary consumer",
+    )
+    calibrate.add_argument("--target-risk", type=float, default=0.10)
     _add_dry_run(calibrate)
     _add_json(calibrate)
 
@@ -557,6 +570,68 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
             "status": "written",
             "markdown": markdown.name,
             "machine": machine.name,
+        }
+    if args.command_path == "evaluate" and not args.dry_run:
+        from screen2action.eval.runner import run_evaluation
+        from screen2action.eval.sweep_runner import run_evaluation_sweep
+        from screen2action.model_assets import configured_model_cache_root
+
+        missing = [
+            name
+            for name in ("checkpoint", "manifest", "cache_manifest", "output")
+            if getattr(args, name) is None
+        ]
+        if missing:
+            raise ValueError(
+                "evaluate requires " + ", ".join(f"--{name.replace('_', '-')}" for name in missing)
+            )
+        config = load_config(args.config, overrides=args.overrides)
+        evaluation_values = config.values.get("evaluation")
+        configured_sweep = bool(
+            isinstance(evaluation_values, dict) and evaluation_values.get("mode") == "sweep"
+        )
+        if args.sweep or configured_sweep:
+            return run_evaluation_sweep(
+                config,
+                checkpoint=args.checkpoint,
+                manifest=args.manifest,
+                cache_manifest=args.cache_manifest,
+                output_directory=args.output,
+                model_lock=args.model_lock,
+                model_cache_root=configured_model_cache_root(root, args.cache_root),
+                device=args.device,
+                split=args.split,
+                max_commands=args.max_commands,
+                calibration=args.calibration,
+            )
+        result = run_evaluation(
+            config,
+            checkpoint=args.checkpoint,
+            manifest=args.manifest,
+            cache_manifest=args.cache_manifest,
+            output_directory=args.output,
+            model_lock=args.model_lock,
+            model_cache_root=configured_model_cache_root(root, args.cache_root),
+            device=args.device,
+            split=args.split,
+            max_commands=args.max_commands,
+            calibration=args.calibration,
+        )
+        return result.as_dict()
+    if args.command_path == "calibrate" and not args.dry_run:
+        from screen2action.eval.reporting import fit_validation_calibration_artifacts
+
+        if args.predictions is None or args.output is None:
+            raise ValueError("calibrate requires --predictions and --output")
+        calibration_result = fit_validation_calibration_artifacts(
+            args.predictions,
+            args.output,
+            target_risk=args.target_risk,
+        )
+        return {
+            **calibration_result,
+            "requested_method": args.method,
+            "emitted_methods": ["temperature", "threshold"],
         }
     if args.command_path == "train smoke" and not args.dry_run:
         from screen2action.training.smoke import run_training_smoke
