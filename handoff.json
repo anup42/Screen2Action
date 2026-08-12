@@ -7,16 +7,17 @@
       "python -m pytest tests/unit/test_handoff.py -q",
       "python -m screen2action.tools.verify all",
       "screen2action doctor --device cpu --json",
+      "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all"
     ],
     "refresh_handoff": "screen2action handoff snapshot",
     "resume": "screen2action train smoke --device cpu"
   },
   "data_manifests": [],
-  "generated_at_utc": "2026-08-12T17:46:05+00:00",
+  "generated_at_utc": "2026-08-12T17:55:30+00:00",
   "git": {
     "branch": "main",
-    "commit": "e17929e08b573ea7375e896c939fc7365f8794ca",
+    "commit": "f91b806e81eb34671c157d50378bb6df7fba2c64",
     "dirty": false,
     "dirty_entry_count": 0,
     "generated_files_excluded_from_dirty_check": [
@@ -36,22 +37,23 @@
     "os": "Windows",
     "os_release": "11",
     "python": "3.12.10",
-    "repository_volume_free_bytes": 32945123328
+    "repository_volume_free_bytes": 32659832832
   },
   "models": {
     "lock_path": "configs/models/lock.json",
     "lock_sha256": null,
     "registry_path": "configs/models/registry.yaml",
-    "registry_sha256": "79faf3107a0f462a8adbc166888137b7a79800714e7e6effd47fd884577cf292",
+    "registry_sha256": "7856d6feb57eff36fb0e18f3d8a558a060208cbda9b3680996ad4a96121ae6df",
     "status": "unresolved"
   },
   "perception_cache_manifests": [],
   "plan": {
-    "active_milestone": "Milestone 2 - model registry and reproducible assets",
+    "active_milestone": "Milestone 3 - production perception and taxonomy",
     "active_path": "docs/plans/complete_pipeline.md",
     "completed_milestones": [
       "Milestone 0 - repository truth and resumable handoff",
-      "Milestone 1 - typed configuration, CLI, and environment diagnostics"
+      "Milestone 1 - typed configuration, CLI, and environment diagnostics",
+      "Milestone 2 - model registry and reproducible assets"
     ]
   },
   "unresolved_decisions": [
