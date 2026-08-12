@@ -5,8 +5,8 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: Milestone 8 - evaluation, calibration, sweeps, and reports
-- Git branch/commit: `main` / `8ff118e1bfe7d57cac2a1f96034f8cda350f4daa`
+- Active milestone: None - implementation plan complete
+- Git branch/commit: `main` / `2a24647186480878bf4293ec60ccdec73fdf36d9`
 - Source dirty at snapshot: `false`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
@@ -24,6 +24,8 @@ architecture/runbook documents listed in `AGENTS.md`.
 - Milestone 5 - canonical data lake and audits
 - Milestone 6 - resumable perception precompute
 - Milestone 7 - GPU/DDP stage training
+- Milestone 8 - evaluation, calibration, sweeps, and reports
+- Milestone 9 - partitioned export/runtime
 
 ## Exact continuation commands
 
@@ -33,9 +35,9 @@ architecture/runbook documents listed in `AGENTS.md`.
 
 ## Last successful commands
 
-- `python -m pytest tests/unit/test_handoff.py -q`
-- `python -m screen2action.tools.verify all`
 - `screen2action doctor --device cpu --json`
+- `python -m screen2action.tools.verify all`
+- `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
@@ -72,6 +74,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - Did the paper jointly optimize detector-native losses with downstream losses, and if so what update ratio and optimizer state sharing were used?
 - Which exact CRNN alphabet, Unicode normalization, augmentation, and CTC blank-token convention were used for UI-specific OCR fine-tuning?
 - Which operations were quantized for the reported mobile model, including activation granularity, calibration observer, backend, and fallback policy?
+- What fixed maximum node/edge capacities and graph tensor layout did the paper's mobile runtime use, and which backend/operator versions were validated for each neural partition?
 
 ## Machine-readable state
 
