@@ -266,7 +266,7 @@ def render_handoff_markdown(snapshot: Mapping[str, Any]) -> str:
         f"- Active plan: `{plan['active_path']}`",
         f"- Active milestone: {plan['active_milestone']}",
         f"- Git branch/commit: `{git['branch']}` / `{git['commit']}`",
-        f"- Source dirty at snapshot: `{str(git['dirty']).lower()}` ",
+        f"- Source dirty at snapshot: `{str(git['dirty']).lower()}`",
         "  (`HANDOFF.md` and `handoff.json` are excluded from this check).",
         f"- Model lock: {models['status']} (`{models['lock_path']}`).",
         "",
