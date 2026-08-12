@@ -128,7 +128,7 @@ measurement under the stated protocol.
 - [x] Typed click/long-press/scroll/drag/confidence heads and masked losses.
 - [x] Tiny cached forward/backward and model command-independence tests.
 
-### Milestone 5 - canonical data lake and audits
+### Milestone 5 - canonical data lake and audits (COMPLETE)
 
 - [x] Backward-compatible provenance-rich schemas and environment-root layout.
 - [x] Source registry and fixture adapters for GUIAct, GUIEnv, AMEX,
