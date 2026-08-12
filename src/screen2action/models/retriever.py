@@ -253,3 +253,60 @@ class RelationAwareReranker(nn.Module):
                 for index in range(base_scores.shape[0])
             ]
         )
+
+    def forward_dense(
+        self,
+        base_scores: torch.Tensor,
+        node_features: torch.Tensor,
+        relation_mask: torch.Tensor,
+        relative_geometry: torch.Tensor,
+        valid_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """Rerank a batch using fixed ``[source,destination]`` relation grids."""
+
+        if base_scores.ndim != 2 or node_features.ndim != 3:
+            raise ValueError("dense reranker scores/nodes must have shapes [B,N] and [B,N,D]")
+        batch, node_count = base_scores.shape
+        if node_features.shape[:2] != (batch, node_count):
+            raise ValueError("dense reranker node features do not match scores")
+        relation_count = len(RELATION_ORDER)
+        if relation_mask.shape != (batch, relation_count, node_count, node_count):
+            raise ValueError("dense reranker relation_mask must have shape [B,R,N,N]")
+        if relative_geometry.shape != (
+            batch,
+            relation_count,
+            node_count,
+            node_count,
+            self.geometry_dim,
+        ):
+            raise ValueError("dense reranker geometry has an incompatible fixed shape")
+        if valid_nodes.shape != (batch, node_count):
+            raise ValueError("dense reranker valid_nodes must have shape [B,N]")
+        output = base_scores
+        normalized_weights = torch.softmax(self.relation_weights, dim=0)
+        source_states = node_features.unsqueeze(2).expand(-1, -1, node_count, -1)
+        destination_states = node_features.unsqueeze(1).expand(-1, node_count, -1, -1)
+        source_valid = valid_nodes.bool().unsqueeze(2)
+        destination_valid = valid_nodes.bool().unsqueeze(1)
+        for relation_index in range(len(RELATION_ORDER)):
+            relation_states = self.relation_embedding.weight[relation_index].view(1, 1, 1, -1)
+            relation_states = relation_states.expand(batch, node_count, node_count, -1)
+            compatibility_input = torch.cat(
+                (
+                    destination_states,
+                    source_states,
+                    relative_geometry[:, relation_index],
+                    relation_states,
+                ),
+                dim=-1,
+            )
+            compatibility = self.compatibility[relation_index](compatibility_input).squeeze(-1)
+            edge_mask = relation_mask[:, relation_index].bool() & source_valid & destination_valid
+            neighbor_weights = torch.softmax(compatibility.masked_fill(~edge_mask, -1e9), dim=1)
+            neighbor_weights = neighbor_weights * edge_mask.to(neighbor_weights.dtype)
+            neighbor_weights = neighbor_weights / neighbor_weights.sum(
+                dim=1, keepdim=True
+            ).clamp_min(1e-12)
+            evidence = (neighbor_weights * base_scores.unsqueeze(2)).sum(dim=1)
+            output = output + self.lambda_ref * normalized_weights[relation_index] * evidence
+        return output.masked_fill(~valid_nodes.bool(), -1e9)

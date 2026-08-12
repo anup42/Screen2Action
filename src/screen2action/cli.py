@@ -416,6 +416,13 @@ def _parser() -> argparse.ArgumentParser:
     export.add_argument(
         "--profile", choices=("accurate", "fast_roi", "tiny_cpu"), default="tiny_cpu"
     )
+    export.add_argument("--model-lock", type=Path, default=Path("configs/models/lock.json"))
+    export.add_argument("--cache-root", type=Path)
+    export.add_argument(
+        "--visual-checkpoint",
+        type=Path,
+        help="trained Stage-1 visual-model.pt or compatible stage checkpoint",
+    )
     _add_config(export)
     _add_dry_run(export)
     _add_json(export)
@@ -571,6 +578,36 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
             "markdown": markdown.name,
             "machine": machine.name,
         }
+    if args.command_path == "export":
+        from screen2action.export.runner import run_partitioned_export
+        from screen2action.model_assets import configured_model_cache_root
+
+        default_configs = {
+            "accurate": Path("configs/export/accurate.yaml"),
+            "fast_roi": Path("configs/export/fast_roi.yaml"),
+            "tiny_cpu": Path("configs/export/tiny_cpu.yaml"),
+        }
+        config = load_config(
+            args.config or default_configs[args.profile],
+            overrides=args.overrides,
+        )
+        if args.dry_run:
+            payload = _dry_run_payload(args)
+            payload["resolved_config_sha256"] = config.sha256
+            payload["config_schema_version"] = config.schema_version
+            payload["profile_output_subdirectory"] = args.profile
+            return payload
+        if args.checkpoint is None or args.output is None:
+            raise ValueError("export requires --checkpoint and --output")
+        return run_partitioned_export(
+            config,
+            checkpoint=args.checkpoint,
+            output_directory=args.output,
+            profile=args.profile,
+            model_lock=args.model_lock,
+            model_cache_root=configured_model_cache_root(root, args.cache_root),
+            visual_checkpoint=args.visual_checkpoint,
+        ).as_dict()
     if args.command_path == "evaluate" and not args.dry_run:
         from screen2action.eval.runner import run_evaluation
         from screen2action.eval.sweep_runner import run_evaluation_sweep
@@ -1043,8 +1080,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         payload = _run_command(args)
         _emit(payload, as_json=bool(args.json))
         if (
-            args.command_path in {"doctor", "models verify", "perception validate"}
-            and not payload["ok"]
+            args.command_path in {"doctor", "models verify", "perception validate", "export"}
+            and payload.get("ok") is False
         ):
             return 1
         return 0

@@ -212,6 +212,91 @@ class RelationAwareGraphAttention(nn.Module):
             relative_geometry[source, destination],
         )
 
+    def forward_export_dense(
+        self,
+        node_features: torch.Tensor,
+        relation_mask: torch.Tensor,
+        relative_geometry: torch.Tensor,
+        valid_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """Apply the same relation equations with fixed dense export tensors.
+
+        The regular dense path converts a relation matrix back to a compact
+        edge list. That is useful in PyTorch but introduces data-dependent
+        ``nonzero`` shapes. This formulation keeps source and destination axes
+        fixed so ONNX runtimes can preallocate every intermediate tensor.
+        """
+
+        if node_features.ndim != 3:
+            raise ValueError("export node_features must have shape [B,N,D]")
+        batch, node_count, _ = node_features.shape
+        if relation_mask.shape != (
+            batch,
+            self.relation_count,
+            node_count,
+            node_count,
+        ):
+            raise ValueError("export relation_mask must have shape [B,R,N,N]")
+        if relative_geometry.shape != (
+            batch,
+            self.relation_count,
+            node_count,
+            node_count,
+            self.geometry[0].in_features,
+        ):
+            raise ValueError("export relative_geometry has an incompatible fixed shape")
+        if valid_nodes.shape != (batch, node_count):
+            raise ValueError("export valid_nodes must have shape [B,N]")
+        aggregated = torch.zeros_like(node_features)
+        source_valid = valid_nodes.bool().unsqueeze(2)
+        destination_valid = valid_nodes.bool().unsqueeze(1)
+        source_states = node_features.unsqueeze(2)
+        for relation_id in range(self.relation_count):
+            if self.variant == "paper_eq_v1":
+                query = self.paper_query(node_features).view(
+                    batch, node_count, self.heads, self.head_dim
+                )
+                key = self.paper_key(node_features).view(
+                    batch, node_count, self.heads, self.head_dim
+                )
+            else:
+                query = self.query[relation_id](node_features).view(
+                    batch, node_count, self.heads, self.head_dim
+                )
+                key = self.key[relation_id](node_features).view(
+                    batch, node_count, self.heads, self.head_dim
+                )
+            geometry = self.geometry[relation_id](relative_geometry[:, relation_id]).view(
+                batch,
+                node_count,
+                node_count,
+                self.heads,
+                self.head_dim,
+            )
+            relation = self.relation_embedding[relation_id].view(1, 1, 1, self.heads, self.head_dim)
+            scores = ((key.unsqueeze(2) + geometry + relation) * query.unsqueeze(1)).sum(dim=-1) / (
+                self.head_dim**0.5
+            )
+            edge_mask = relation_mask[:, relation_id].bool() & source_valid & destination_valid
+            weights = torch.softmax(scores.masked_fill(~edge_mask.unsqueeze(-1), -1e9), dim=1)
+            weights = weights * edge_mask.unsqueeze(-1).to(weights.dtype)
+            weights = weights / weights.sum(dim=1, keepdim=True).clamp_min(1e-12)
+            values = self.value[relation_id](source_states).view(
+                batch, node_count, 1, self.heads, self.head_dim
+            )
+            message = (
+                (weights.unsqueeze(-1) * values)
+                .sum(dim=1)
+                .reshape(batch, node_count, self.embedding_dim)
+            )
+            aggregated = aggregated + message
+        output = self.norm(node_features + self.dropout(self.output(aggregated)))
+        no_edges = ~(
+            relation_mask.bool() & source_valid.unsqueeze(1) & destination_valid.unsqueeze(1)
+        ).any(dim=(1, 2, 3))
+        output = torch.where(no_edges.view(batch, 1, 1), self.norm(node_features), output)
+        return output * valid_nodes.unsqueeze(-1).to(output.dtype)
+
     def forward_batched_edges(
         self,
         node_features: torch.Tensor,
@@ -310,4 +395,23 @@ class RelationGraphEncoder(nn.Module):
     ) -> torch.Tensor:
         for layer in self.layers:
             node_features = layer(node_features, edge_index, relation_ids, relative_geometry)
+        return node_features
+
+    def forward_export_dense(
+        self,
+        node_features: torch.Tensor,
+        relation_mask: torch.Tensor,
+        relative_geometry: torch.Tensor,
+        valid_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """Run all graph layers using fixed-shape export equations."""
+
+        for raw_layer in self.layers:
+            layer = cast(RelationAwareGraphAttention, raw_layer)
+            node_features = layer.forward_export_dense(
+                node_features,
+                relation_mask,
+                relative_geometry,
+                valid_nodes,
+            )
         return node_features

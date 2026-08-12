@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
 from screen2action.data.schema import EdgeRecord, RelationDirection, RelationType
@@ -31,3 +32,50 @@ def test_variable_and_dense_relation_attention_have_parity() -> None:
     assert torch.allclose(edge_output, dense_output, atol=1e-6, rtol=1e-6)
     edge_output.sum().backward()
     assert nodes.grad is not None and torch.isfinite(nodes.grad).all()
+
+
+@pytest.mark.parametrize("variant", ["paper_eq_v1", "cpu_reconstruction_v1"])
+def test_fixed_export_graph_equations_match_edge_path(variant: str) -> None:
+    torch.manual_seed(13)
+    nodes = torch.randn(3, 4, 16)
+    valid = torch.tensor(
+        [
+            [True, True, True, False],
+            [True, True, True, True],
+            [True, True, True, True],
+        ]
+    )
+    relation_mask = torch.zeros((3, 3, 4, 4), dtype=torch.bool)
+    geometry = torch.zeros((3, 3, 4, 4, 12))
+    for batch in range(2):
+        relation_mask[batch, 0, 0, 1] = True
+        relation_mask[batch, 2, 0, 1] = True
+        relation_mask[batch, 1, 1, 2] = True
+        geometry[batch, 0, 0, 1] = 0.1
+        geometry[batch, 2, 0, 1] = 0.15
+        geometry[batch, 1, 1, 2] = 0.2
+    relation_mask[1, 2, 2, 3] = True
+    geometry[1, 2, 2, 3] = 0.3
+    layer = RelationAwareGraphAttention(
+        embedding_dim=16,
+        heads=4,
+        geometry_dim=12,
+        variant=variant,
+    ).eval()
+
+    expected_rows = []
+    for batch in range(3):
+        relation, source, destination = torch.nonzero(relation_mask[batch], as_tuple=True)
+        expected_rows.append(
+            layer(
+                nodes[batch],
+                torch.stack((source, destination)),
+                relation,
+                geometry[batch, relation, source, destination],
+            )
+            * valid[batch].unsqueeze(-1)
+        )
+    expected = torch.stack(expected_rows)
+    actual = layer.forward_export_dense(nodes, relation_mask, geometry, valid)
+
+    assert torch.allclose(expected, actual, atol=1e-6, rtol=1e-6)

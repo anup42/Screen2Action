@@ -27,7 +27,7 @@ no qualifying implementation evidence exists.
 | S2A-016 | exact-resume stage runner/checkpoint/distributed helpers | complete | partial | partial | n/a |
 | S2A-017 | direct cascade/subset/action/structure/latency/failure metrics and auditable sweep runner | complete | partial | partial | n/a |
 | S2A-018 | validation-only linked temperature and risk-threshold artifacts | complete | partial | partial | n/a |
-| S2A-019 | fixed-shape tiny ONNX export and ONNXRuntime parity | complete | not-started | not-started | partial |
+| S2A-019 | fixed-shape four-partition tiny ONNX package and ONNXRuntime parity | complete | partial | partial | partial |
 | S2A-020 | train-only calibration, per-channel QAT/weight-only PTQ comparison and unsupported-op inventory | complete | partial | partial | not-started |
 | S2A-021 | structured runtime logging/toy duplicate diagnostics | complete | partial | partial | partial |
 | S2A-022 | resumable handoff/provenance/runbooks | complete | partial | partial | partial |
@@ -39,7 +39,7 @@ no qualifying implementation evidence exists.
 | S2A-028 | unique-screen hash sharding, atomic resume/retry, raw/final cache evidence, validation/stats, cache-only Stage-2 loader | complete | partial | partial | host-only |
 | S2A-029 | torchrun Gloo/NCCL runner, four stages, native branches, exact resume, structured artifacts | complete | partial | partial | n/a |
 | S2A-030 | manifest/checkpoint/cache-bound evaluation with JSON, CSV, Parquet, Markdown, provenance and ScreenSpot guard | complete | partial | partial | n/a |
-| S2A-031 | four-partition paper-reference export/runtime | not-started | not-started | not-started | not-started |
+| S2A-031 | explicit host contract, four neural partitions, overlap-safe relation grids, profile-separated reports, paper-shape graph/command parity | complete | partial | partial | partial |
 
 `host-only` means the operation is deliberately outside a neural export graph.
 `n/a` means the dimension is not applicable. Production and training columns
@@ -70,5 +70,6 @@ paths are exercised; no status is inferred from architecture-only tests.
 | per-channel QAT plus weight-only PTQ comparison | reconstruction ADR-0024 | `training/quantization.py`, Stage 4 integration tests |
 | direct cascade and validation-only calibration | reconstruction ADR-0025 | `eval/runner.py`, `reporting.py`, evaluation integration tests |
 | B/K and named ablation lineage | reconstruction ADR-0025 | `eval/sweep_runner.py`, `configs/experiments/budget_k_sweep.yaml` |
+| fixed dense export graph, four partitions, profile separation | reconstruction ADR-0026 | `export/partitions.py`, `export/runner.py`, `configs/export/` |
 | public model IDs and initial detector thresholds | supplied reconstruction | `configs/models/registry.yaml`, `MODEL_PROVENANCE.md` |
 | public source revisions, license notes, and conversion boundaries | upstream evidence plus reconstruction | `configs/data/sources.yaml`, `DATASET_RUNBOOK.md`, ADR-0020 |

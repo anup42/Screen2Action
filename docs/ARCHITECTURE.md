@@ -92,5 +92,9 @@ Host code retains image decoding, detector/OCR postprocessing, graph
 construction, exact BudgetSelect/closure, crop extraction, cache management,
 and final coordinate conversion. Exportable fixed-shape neural partitions are
 perception, graph/retention, command retrieval/reranking, and candidate
-grounding/action heads. A partition is supported only after PyTorch/export
-parity is observed for that exact profile.
+grounding/action heads. Node/graph export uses a fixed dense relation grid,
+while exact edge-count validation and selection remain on the host. A
+partition is supported only after ONNX validation and CPU PyTorch/ONNXRuntime
+parity are observed for that exact checkpoint and profile. Accurate and Fast
+use separate artifact namespaces; unsupported Fast ROI features produce a
+report instead of an Accurate substitution. See `EXPORT_CONTRACTS.md`.

@@ -60,6 +60,15 @@ def test_mobilevit_shape_probe_has_a_no_weight_dry_run(capsys: object) -> None:
     assert payload["status"] == "dry_run"
 
 
+def test_export_dry_run_selects_profile_config_without_writing(capsys: object) -> None:
+    assert main(["export", "--profile", "accurate", "--dry-run", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert payload["command"] == "export"
+    assert payload["status"] == "dry_run"
+    assert payload["profile_output_subdirectory"] == "accurate"
+    assert payload["config_schema_version"] == 1
+
+
 def test_precompute_uses_torchrun_rank_for_process_safe_sharding(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

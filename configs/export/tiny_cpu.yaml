@@ -1,0 +1,15 @@
+extends: ../experiments/tiny_cpu_e2e.yaml
+name: tiny_cpu_partition_export
+device: cpu
+export:
+  profile: tiny_cpu
+  status: cpu_reconstruction
+  batch_size: 1
+  visual_batch_size: 8
+  max_nodes: 8
+  max_edges: 32
+  geometry_dim: 12
+  action_count: 4
+  opset_version: 17
+  parity_atol: 0.0001
+  parity_rtol: 0.001

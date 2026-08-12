@@ -121,6 +121,40 @@ class MobileNetV3IconActionability(nn.Module):
             visual[valid_mask] = self.visual_projection(pooled)
         return IconActionabilityOutput(icon_logits, action_logits, visual, valid_mask)
 
+    def forward_export(
+        self,
+        crops: torch.Tensor,
+        valid_mask: torch.Tensor,
+    ) -> IconActionabilityOutput:
+        """Return fixed-shape outputs without data-dependent crop compaction."""
+
+        if crops.ndim != 4 or crops.shape[1] != 3:
+            raise ValueError("crops must have shape [batch, 3, height, width]")
+        batch = crops.shape[0]
+        if valid_mask.shape != (batch,) or valid_mask.dtype is not torch.bool:
+            raise ValueError("valid_mask must be boolean with shape [batch]")
+        features = self.backbone(crops)
+        if features.ndim != 4 or features.shape[1] != self.backbone_dimension:
+            raise ValueError("backbone output does not match declared feature dimension")
+        pooled = self.pool(features).flatten(1)
+        valid = valid_mask.unsqueeze(1)
+        icon_logits = torch.where(
+            valid,
+            self.icon_head(pooled),
+            self.null_icon_logits.unsqueeze(0).expand(batch, -1),
+        )
+        action_logits = torch.where(
+            valid,
+            self.actionability_head(pooled),
+            self.null_actionability_logits.unsqueeze(0).expand(batch, -1),
+        )
+        visual = torch.where(
+            valid,
+            self.visual_projection(pooled),
+            self.null_visual_feature.unsqueeze(0).expand(batch, -1),
+        )
+        return IconActionabilityOutput(icon_logits, action_logits, visual, valid_mask)
+
 
 def masked_icon_actionability_loss(
     output: IconActionabilityOutput,

@@ -126,13 +126,16 @@ class SparseCandidateGrounder(nn.Module):
         key_padding = ~group_mask.reshape(batch, candidates * group_length).bool()
         flattened_values = flattened
         all_masked = key_padding.all(dim=1)
-        if bool(all_masked.any()):
-            key_padding = key_padding.clone()
-            flattened_values = flattened.clone()
-            flattened_position = flattened_position.clone()
-            key_padding[all_masked, 0] = False
-            flattened_values[all_masked, 0] = 0.0
-            flattened_position[all_masked, 0] = 0.0
+        fallback = all_masked.unsqueeze(1) & (
+            torch.arange(key_padding.shape[1], device=key_padding.device).unsqueeze(0) == 0
+        )
+        key_padding = key_padding & ~fallback
+        flattened_values = torch.where(
+            fallback.unsqueeze(-1), torch.zeros_like(flattened_values), flattened_values
+        )
+        flattened_position = torch.where(
+            fallback.unsqueeze(-1), torch.zeros_like(flattened_position), flattened_position
+        )
         attended, _ = self.command_attn[block_index](
             command_states,
             flattened_values + flattened_position,
@@ -188,13 +191,16 @@ class SparseCandidateGrounder(nn.Module):
             dim=1,
         )
         all_masked = context_mask.all(dim=1)
-        if bool(all_masked.any()):
-            context_mask = context_mask.clone()
-            local_context = local_context.clone()
-            local_position = local_position.clone()
-            context_mask[all_masked, 0] = False
-            local_context[all_masked, 0] = 0.0
-            local_position[all_masked, 0] = 0.0
+        fallback = all_masked.unsqueeze(1) & (
+            torch.arange(context_mask.shape[1], device=context_mask.device).unsqueeze(0) == 0
+        )
+        context_mask = context_mask & ~fallback
+        local_context = torch.where(
+            fallback.unsqueeze(-1), torch.zeros_like(local_context), local_context
+        )
+        local_position = torch.where(
+            fallback.unsqueeze(-1), torch.zeros_like(local_position), local_position
+        )
         attended, _ = self.local_attn[block_index](
             flattened_groups,
             local_context + local_position,

@@ -32,5 +32,8 @@ kept visible so later experiments do not silently turn defaults into facts.
     blank-token convention were used for UI-specific OCR fine-tuning?
 17. Which operations were quantized for the reported mobile model, including
     activation granularity, calibration observer, backend, and fallback policy?
+18. What fixed maximum node/edge capacities and graph tensor layout did the
+    paper's mobile runtime use, and which backend/operator versions were
+    validated for each neural partition?
 
 Until these are answered, reports must label results as reconstruction results.

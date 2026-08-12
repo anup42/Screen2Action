@@ -400,6 +400,10 @@ def build_semantics_graph_model(
         values.get("embedding_dim", 64 if profile == "tiny_cpu" else 256),
         context="model.embedding_dim",
     )
+    visual_feature_dim = _integer(
+        values.get("visual_feature_dim", 16 if profile == "tiny_cpu" else 256),
+        context="model.visual_feature_dim",
+    )
     graph_layers = _integer(
         values.get("graph_layers", 1 if profile == "tiny_cpu" else 2),
         context="model.graph_layers",
@@ -419,7 +423,7 @@ def build_semantics_graph_model(
         visual = MobileNetV3IconActionability(
             _TinyVisualBackbone(),
             backbone_dimension=32,
-            visual_dimension=embedding_dim,
+            visual_dimension=visual_feature_dim,
         )
         return SemanticsModelBundle(
             SemanticsGraphModel(

@@ -4,7 +4,8 @@ import torch
 
 from screen2action.data.schema import EdgeRecord, RelationDirection, RelationType
 from screen2action.models.hard_negatives import mine_same_screen_negatives
-from screen2action.models.retriever import select_top_k_actionable
+from screen2action.models.relation_gat import RELATION_TO_ID
+from screen2action.models.retriever import RelationAwareReranker, select_top_k_actionable
 
 
 def test_fixed_k_retrieval_marks_padding_instead_of_duplicating_nodes(make_node) -> None:
@@ -44,3 +45,35 @@ def test_same_screen_negative_mining_fills_four_unique_nodes_when_available(make
 
     assert len({negative.node_id for negative in negatives}) >= 4
     assert all(negative.node_id != target.node_id for negative in negatives)
+
+
+def test_dense_relation_reranker_matches_canonical_edge_equation() -> None:
+    torch.manual_seed(21)
+    reranker = RelationAwareReranker(embedding_dim=16, geometry_dim=12).eval()
+    scores = torch.tensor([0.8, 0.4, -0.2, 0.1])
+    nodes = torch.randn(4, 16)
+    valid = torch.tensor([True, True, True, False])
+    edges = [
+        EdgeRecord(0, 1, RelationType.CONTAINMENT, RelationDirection.CONTAINS, (0.1,) * 12),
+        EdgeRecord(0, 1, RelationType.ORDINAL, RelationDirection.NEXT, (0.15,) * 12),
+        EdgeRecord(2, 1, RelationType.PROXIMITY, RelationDirection.LEFT, (0.2,) * 12),
+        EdgeRecord(1, 2, RelationType.ORDINAL, RelationDirection.NEXT, (0.3,) * 12),
+        EdgeRecord(2, 3, RelationType.PROXIMITY, RelationDirection.RIGHT, (0.4,) * 12),
+    ]
+    relation_mask = torch.zeros((1, 3, 4, 4), dtype=torch.bool)
+    geometry = torch.zeros((1, 3, 4, 4, 12))
+    for edge in edges:
+        relation = RELATION_TO_ID[edge.relation]
+        relation_mask[0, relation, edge.src, edge.dst] = True
+        geometry[0, relation, edge.src, edge.dst] = torch.tensor(edge.relative_geometry)
+
+    expected = reranker(scores, nodes, edges, valid)
+    actual = reranker.forward_dense(
+        scores.unsqueeze(0),
+        nodes.unsqueeze(0),
+        relation_mask,
+        geometry,
+        valid.unsqueeze(0),
+    )[0]
+
+    assert torch.allclose(expected, actual, atol=1e-6, rtol=1e-6)

@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 9 - partitioned export/runtime
+**Active milestone:** Completion workflow - final handoff, publication, and archive
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -171,14 +171,14 @@ measurement under the stated protocol.
 - [x] B/K, selector/loss/relation/model/quantization ablations from config.
 - [x] Offline report/calibration/leakage tests.
 
-### Milestone 9 - partitioned export/runtime
+### Milestone 9 - partitioned export/runtime (COMPLETE)
 
-- [ ] Explicit host operations and four logical export partitions.
-- [ ] Fixed-shape contracts and CPU PyTorch/export parity for supported
+- [x] Explicit host operations and four logical export partitions.
+- [x] Fixed-shape contracts and CPU PyTorch/export parity for supported
       paper-reference subgraphs.
-- [ ] Clear partition report for unsupported operations.
-- [ ] Accurate/Fast artifacts and metrics remain separate.
-- [ ] Export tests and complete handoff.
+- [x] Clear partition report for unsupported operations.
+- [x] Accurate/Fast artifacts and metrics remain separate.
+- [x] Export tests and handoff-ready documentation.
 
 ## Progress log
 
@@ -244,6 +244,17 @@ measurement under the stated protocol.
   Training-loss/QAT jobs require distinct checkpoints and optional ROIAlign
   Fast remains explicitly unsupported. Eighteen focused tests pass; Milestone 9
   is active.
+- **2026-08-13:** Implemented four fixed-shape ONNX partitions, vectorized
+  dense graph/reranker equations with edge-path parity, atomic profile
+  packages, explicit host ownership, and checkpoint/model-lock provenance.
+  The complete tiny package test exported and validated all four partitions.
+  An opt-in paper-shape graph/command ONNX parity test passed. Fast ROI emits a
+  separate unsupported report and performs no Accurate substitution. Final
+  full-suite verification and handoff refresh remain.
+- **2026-08-13:** The Milestone 9 full offline gate passed: 177 Python files
+  were formatted, Ruff and Mypy passed, and 137 tests passed with nine opt-in
+  network/GPU/slow tests deselected. Implementation milestones 0-9 are
+  complete; final publication, handoff snapshot, and source archive remain.
 
 ## Discoveries and surprises
 
@@ -255,6 +266,10 @@ measurement under the stated protocol.
   outside repository source scope and will be ignored, not cleaned up.
 - The task prompt's baseline test count was stale: current baseline collection
   is 41 tests, all passing before Milestone 0 changes.
+- A single dense relation ID per source/destination pair would have erased
+  overlapping containment/proximity/ordinal edges. Export therefore uses a
+  boolean relation axis and separately indexed geometry, with host-side typed
+  edge capacity validation and parity for overlap and empty-graph cases.
 
 ## Decision log
 
@@ -305,6 +320,10 @@ measurement under the stated protocol.
   observations directly; fit calibration only on held-out non-ScreenSpot
   validation rows; and require distinct checkpoint lineages for training-loss
   and QAT ablations instead of relabeling a baseline result.
+- **D-014 (export boundary):** Keep discrete geometry/selection/crop policies
+  on the host; use fixed dense neural graph tensors with direct edge-equation
+  parity; require per-profile ONNXRuntime parity and lineage reports; never
+  substitute Accurate artifacts for unsupported Fast ROI.
 
 ## Validation ledger
 
@@ -378,6 +397,17 @@ measurement under the stated protocol.
 - **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 172
   Python files formatted, Ruff and Mypy passed, and 128 offline tests passed
   with eight opt-in network/GPU tests deselected.
+- **2026-08-13:** focused Milestone 9 tests - exit 0; 21 graph, reranker,
+  visual-null, sparse-mask, semantics, and CLI tests passed; the two-test
+  partition integration exported all four tiny subgraphs with CPU parity and
+  confirmed Fast remains a separate unsupported package.
+- **2026-08-13:** `python -m pytest tests/slow/test_paper_export_parity.py -m
+  slow -q` - exit 0; paper-dimension graph/retention and six-layer
+  command/retrieval/reranking ONNX parity passed on CPU with locally
+  initialized architecture weights.
+- **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 177
+  Python files formatted, Ruff and Mypy passed, and 137 offline tests passed
+  with nine opt-in network/GPU/slow tests deselected.
 
 ## Remaining blockers and continuation
 
@@ -388,4 +418,7 @@ immutable-input commands are recorded in `docs/GPU_RUNBOOK.md`.
 
 ## Outcome summary
 
-Active; no outcome claimed.
+Implementation milestones 0-9 are complete under the documented offline and
+fixture evidence boundaries. Final handoff publication and the review archive
+are active; real public assets/data, CUDA training, Accurate locked export, and
+mobile measurement remain external gates.

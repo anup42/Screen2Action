@@ -8,7 +8,7 @@
 | `src/screen2action/models/` | node/graph/command/crop/retrieval/grounding modules | weights external |
 | `src/screen2action/training/` | staged trainer, distributed launch, checkpoints | runs/checkpoints external |
 | `src/screen2action/eval/` | metrics, calibration, sweeps, reports | reports generated |
-| `src/screen2action/export/` | static contracts, ONNX/quantization/parity | artifacts external |
+| `src/screen2action/export/` | four fixed-shape partitions, atomic profile packages, ONNX/quantization/parity | artifacts external |
 | `src/screen2action/cli.py` | shared console and `python -m` command tree | none |
 | `configs/` | versioned reconstruction intent and experiment profiles | model lock is generated |
 | `docs/` | paper boundary, ADRs, traceability, runbooks, active plan | handoff is generated |

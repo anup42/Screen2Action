@@ -1,0 +1,15 @@
+extends: ../experiments/public_smoke_real_models.yaml
+name: fast_roi_partition_export
+device: cpu
+export:
+  profile: fast_roi
+  status: unsupported_optional_reconstruction
+  batch_size: 1
+  visual_batch_size: 8
+  max_nodes: 64
+  max_edges: 512
+  geometry_dim: 12
+  action_count: 4
+  opset_version: 17
+  parity_atol: 0.0001
+  parity_rtol: 0.001

@@ -362,3 +362,38 @@ write an independent artifact directory. Training-loss ablations and QAT
 require separately named checkpoints; the runner reports a missing lineage
 instead of reusing the baseline and inventing an ablation result. ROIAlign Fast
 is optional and currently reported as unsupported, with no substituted metric.
+
+## ADR-0026: Fixed neural partitions and explicit host runtime
+
+**Status:** accepted for the public reconstruction.
+
+Export preserves the paper's command-independent frame boundary but does not
+attempt to serialize discrete host policies. Image preprocessing, detector NMS,
+OCR decoding, canonical graph construction, exact BudgetSelect with closure
+repair, actionability/top-K identity selection, crop extraction, and final
+coordinate conversion remain named host operations.
+
+The neural boundary is four profile-specific ONNX files: visual semantics;
+node fusion plus graph/retention; command encoding plus retrieval/reranking;
+and crop encoding plus sparse grounding/action heads. Graph and reranker export
+use fixed dense `[relation,source,destination]` masks and geometry grids
+sharing the trained edge-list parameters. The relation axis preserves
+overlapping typed edges. Masked softmax preserves the canonical incoming
+neighbor equation without data-dependent `nonzero` output shapes. Fixed shape
+checks are part of the package contract, and the host rejects graph capacity
+overflow rather than truncating silently.
+
+Each artifact is emitted only after ONNX validation and direct CPU
+ONNXRuntime/PyTorch parity. Packages bind the resolved config, downstream and
+visual checkpoint digests, model-lock digest, code identity, exact tensor
+shapes/dtypes, and parity tolerances/errors. An existing profile directory is
+not overwritten. Tiny evidence is labeled CPU reconstruction. Accurate
+requires locked public modules and matching trained checkpoints at export
+time. Fast ROI keeps a separate namespace and currently emits an unsupported
+report because neither its crop-token operator nor distinct trained topology
+exists; Accurate artifacts are never substituted.
+
+Paper-dimension graph/retention and command/retrieval/reranking parity with
+locally initialized modules is architecture/equation evidence only. It is not
+a claim about pretrained weights, quantized accuracy, mobile operator support,
+artifact size, or Galaxy latency.

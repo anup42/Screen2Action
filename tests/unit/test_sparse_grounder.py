@@ -32,3 +32,19 @@ def test_candidate_local_attention_has_no_direct_cross_candidate_path() -> None:
     modified = model.local_candidate_update(command, changed, mask)
     assert torch.allclose(baseline[:, 1:], modified[:, 1:], atol=1e-6, rtol=1e-6)
     assert not torch.allclose(baseline[:, 0], modified[:, 0])
+
+
+def test_all_masked_sparse_groups_use_finite_export_safe_fallback() -> None:
+    torch.manual_seed(29)
+    model = SparseCandidateGrounder(embedding_dim=16, heads=4, blocks=1).eval()
+    output = model(
+        torch.randn(1, 3, 16),
+        torch.randn(1, 2, 4, 16),
+        torch.randn(1, 2, 16),
+        command_mask=torch.zeros((1, 3), dtype=torch.bool),
+        candidate_mask=torch.zeros((1, 2), dtype=torch.bool),
+        crop_mask=torch.zeros((1, 2, 4), dtype=torch.bool),
+    )
+
+    assert torch.isfinite(output.point_local).all()
+    assert output.candidate_logits.tolist() == [[-1e9, -1e9]]

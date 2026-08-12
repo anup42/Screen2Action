@@ -116,7 +116,7 @@ def _single_weight(paths: tuple[Path, ...], *, role: str) -> Path:
 def _checkpoint_state(payload: object) -> Mapping[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("visual checkpoint must be a state-dict mapping")
-    for key in ("visual_model_state", "state_dict", "model_state_dict"):
+    for key in ("visual_model_state", "state_dict", "model_state_dict", "model"):
         nested = payload.get(key)
         if isinstance(nested, dict):
             payload = nested
@@ -144,6 +144,32 @@ def _checkpoint_state(payload: object) -> Mapping[str, Any]:
     return state
 
 
+def load_visual_checkpoint_weights(
+    model: MobileNetV3IconActionability,
+    checkpoint: Path,
+    *,
+    expected_model_lock_digest: str | None = None,
+) -> dict[str, object]:
+    """Load a Stage-1 visual artifact and verify its model-lock lineage."""
+
+    resolved = checkpoint.resolve()
+    if not resolved.is_file():
+        raise FileNotFoundError(f"visual checkpoint does not exist: {checkpoint}")
+    payload = torch.load(resolved, map_location="cpu", weights_only=False)
+    if not isinstance(payload, dict):
+        raise ValueError("visual checkpoint payload must be a mapping")
+    lineage = payload.get("model_lock_digest", payload.get("model_lock_hash"))
+    if expected_model_lock_digest is not None:
+        if not isinstance(lineage, str) or lineage != expected_model_lock_digest:
+            raise ValueError("visual checkpoint model-lock digest mismatch")
+    model.load_state_dict(_checkpoint_state(payload), strict=True)
+    return {
+        "sha256": sha256_file(resolved),
+        "model_lock_digest": str(lineage or "unknown"),
+        "source_stage": str(payload.get("source_stage", "unknown")),
+    }
+
+
 def _load_visual_model(
     backbone_path: Path,
     *,
@@ -162,12 +188,8 @@ def _load_visual_model(
                 "use --allow-untrained-heads only for a deterministic smoke run"
             )
         return model, checkpoint_digest, "deterministic_untrained_heads"
-    resolved = checkpoint.resolve()
-    if not resolved.is_file():
-        raise FileNotFoundError(f"visual checkpoint does not exist: {checkpoint}")
-    checkpoint_digest = sha256_file(resolved)
-    state = _checkpoint_state(torch.load(resolved, map_location="cpu", weights_only=True))
-    model.load_state_dict(state, strict=True)
+    loaded = load_visual_checkpoint_weights(model, checkpoint)
+    checkpoint_digest = str(loaded["sha256"])
     return model, checkpoint_digest, "trained_checkpoint"
 
 

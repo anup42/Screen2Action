@@ -46,8 +46,11 @@ Configuration supports recursive `extends`, `${ENV_VAR}` or
 `${ENV_VAR:-default}` expansion, repeatable `--set dotted.key=value`
 overrides, schema validation, and resolved snapshots in run directories.
 
-The `export` extra supplies ONNX and ONNXRuntime for the CPU numerical parity
-test; the core runtime itself does not require either package.
+The `export` extra supplies ONNX and ONNXRuntime. `screen2action export`
+creates separate `tiny_cpu`, `accurate`, or `fast_roi` packages with fixed
+shape, host-boundary, checkpoint-lineage, and per-partition CPU parity reports.
+Fast ROI is explicitly unsupported and never aliases Accurate artifacts. See
+`docs/EXPORT_CONTRACTS.md`; the core runtime itself does not require ONNX.
 
 If GNU Make is available, the same checks are exposed as `make test`,
 `make lint`, `make typecheck`, and `make verify-cpu`.
@@ -67,6 +70,8 @@ outputs must remain outside Git.
 
 ## Current status
 
-The CPU architecture milestone is implemented and tested. Tiny ONNX parity is
-not paper-reference/mobile export. Public ScreenSpot and mobile-latency numbers
-in the paper are diagnostic targets, not claims made by this repository.
+The CPU architecture milestone is implemented and tested, including all four
+tiny ONNX partitions and paper-shape graph/command parity. Locked Accurate
+weights/checkpoints and a mobile runtime remain external gates. Public
+ScreenSpot and mobile-latency numbers in the paper are diagnostic targets, not
+claims made by this repository.

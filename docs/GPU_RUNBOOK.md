@@ -47,6 +47,24 @@ Stage 3 keeps OCR frozen and, when enabled, alternates detector-native updates
 without claiming gradients through NMS. Stage 4 requires a Stage 3
 initialization or an exact Stage 4 resume.
 
+After Stage 1 and Stage 3 produce digest-compatible artifacts, create the
+profile-separated Accurate package. Export runs ONNXRuntime parity on CPU even
+when training occurred on CUDA, so it may be moved to a CPU packaging host with
+the same verified lock assets:
+
+```text
+screen2action export --profile accurate \
+  --config configs/export/accurate.yaml \
+  --checkpoint ${SCREEN2ACTION_RUN_ROOT}/stage3/checkpoints/best.pt \
+  --visual-checkpoint ${SCREEN2ACTION_RUN_ROOT}/stage1-semantics/checkpoints/visual-model.pt \
+  --model-lock configs/models/lock.json \
+  --output ${SCREEN2ACTION_RUN_ROOT}/exports --json
+```
+
+Do not use `fast_roi` as an alias. It currently writes a separate unsupported
+report until an ROIAlign crop-token implementation and distinct trained
+checkpoint lineage exist. See `EXPORT_CONTRACTS.md`.
+
 Perception precomputation is data-parallel without DDP collectives. Each
 `torchrun` process loads the locked perception bundle on its `LOCAL_RANK`, and
 stable screen-hash sharding is inferred from `RANK`/`WORLD_SIZE`:

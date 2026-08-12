@@ -65,10 +65,11 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-ra -m 'not network and not gpu'"
+addopts = "-ra -m 'not network and not gpu and not slow'"
 markers = [
   "network: opt-in test that accesses an official network source",
   "gpu: opt-in test that requires an available CUDA device",
+  "slow: opt-in offline test with intentionally expensive model/export work",
   "integration_model: offline end-to-end model integration test",
 ]
 

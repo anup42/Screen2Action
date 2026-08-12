@@ -63,3 +63,17 @@ def test_backbone_freezing_is_stage_controlled() -> None:
 
     model.set_backbone_trainable(True)
     assert all(parameter.requires_grad for parameter in model.backbone.parameters())
+
+
+def test_fixed_export_visual_path_preserves_invalid_crop_nulls() -> None:
+    torch.manual_seed(23)
+    model = _model().eval()
+    crops = torch.randn(3, 3, 16, 16)
+    valid = torch.tensor([True, False, True])
+
+    compact = model(crops, valid)
+    exported = model.forward_export(crops, valid)
+
+    assert torch.allclose(compact.icon_logits, exported.icon_logits)
+    assert torch.allclose(compact.actionability_logits, exported.actionability_logits)
+    assert torch.allclose(compact.visual_features, exported.visual_features, atol=1e-6, rtol=1e-5)
