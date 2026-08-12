@@ -20,7 +20,14 @@ from screen2action import CONFIG_SCHEMA_VERSION, __version__
 FEATURE_MODULES = {
     "core": ("yaml",),
     "cpu": ("torch",),
-    "perception": ("ultralytics", "doctr", "torchvision", "timm", "transformers"),
+    "perception": (
+        "huggingface_hub",
+        "ultralytics",
+        "doctr",
+        "torchvision",
+        "timm",
+        "transformers",
+    ),
     "data": ("datasets", "numpy", "PIL", "pyarrow", "webdataset"),
     "train": ("torch", "tensorboard"),
     "android_control": ("tensorflow",),
@@ -29,6 +36,7 @@ FEATURE_MODULES = {
 }
 MODULE_DISTRIBUTIONS = {
     "yaml": "PyYAML",
+    "huggingface_hub": "huggingface-hub",
     "torch": "torch",
     "ultralytics": "ultralytics",
     "doctr": "python-doctr",

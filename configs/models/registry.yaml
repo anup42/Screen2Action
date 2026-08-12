@@ -4,10 +4,13 @@ cache_environment: SCREEN2ACTION_CACHE_ROOT
 roles:
   ui_detector_screenparser:
     backend: ultralytics
+    asset_provider: huggingface
     upstream_identifier: docling-project/ScreenParser
+    upstream_revision: main
+    allow_patterns: ["*.pt", "*.yaml", "*.yml", "*.json"]
     artifact_selector: model-card-declared-yolo11l-weight
-    license_identifier: NOASSERTION
-    license_note: Resolve and record the model-card license before download.
+    license_identifier: Apache-2.0
+    license_note: Model card reports Apache-2.0; record explicit acceptance before fetch.
     preprocessing:
       color: RGB
       input_long_edge: 1280
@@ -20,6 +23,7 @@ roles:
     reconstruction_caveat: Web-domain leaf detections require a mobile-container audit.
   ocr_crnn_vgg16_bn:
     backend: doctr
+    asset_provider: doctr
     upstream_identifier: doctr.models.recognition.crnn_vgg16_bn
     artifact_selector: pretrained_default
     license_identifier: Apache-2.0
@@ -33,6 +37,7 @@ roles:
     reconstruction_caveat: Recognition-only crops come primarily from ScreenParser.
   icon_backbone_mobilenet_v3_small:
     backend: torchvision
+    asset_provider: torchvision
     upstream_identifier: torchvision.models.mobilenet_v3_small
     artifact_selector: DEFAULT
     license_identifier: BSD-3-Clause
@@ -47,7 +52,10 @@ roles:
     reconstruction_caveat: Sharing one backbone across all three heads is public reconstruction.
   command_encoder_bert_l6_h256_a4:
     backend: transformers
+    asset_provider: huggingface
     upstream_identifier: google/bert_uncased_L-6_H-256_A-4
+    upstream_revision: main
+    allow_patterns: ["*.json", "*.txt", "*.model", "*.safetensors", "*.bin"]
     artifact_selector: pinned_huggingface_revision
     license_identifier: Apache-2.0
     license_note: Resolve the immutable Hub commit before download.
@@ -61,10 +69,13 @@ roles:
     reconstruction_caveat: Node text uses a lightweight shared or separately configured encoder.
   crop_encoder_mobilevit_s:
     backend: timm
+    asset_provider: huggingface
     upstream_identifier: timm/mobilevit_s.cvnets_in1k
+    upstream_revision: main
+    allow_patterns: ["*.json", "*.safetensors", "*.bin"]
     artifact_selector: pinned_huggingface_revision
-    license_identifier: Apache-2.0
-    license_note: Verify weight-card terms and immutable Hub commit at resolution.
+    license_identifier: LicenseRef-Apple-ML-CVNets
+    license_note: The Hub card says other and links Apple's ml-cvnets license; accept those terms.
     preprocessing:
       color: RGB
       input_size: [192, 192]

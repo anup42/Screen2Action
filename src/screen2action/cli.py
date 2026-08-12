@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+import os
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -129,6 +130,7 @@ def _parser() -> argparse.ArgumentParser:
     _add_json(fetch)
     verify = _leaf(model_commands, "verify", "verify locked assets offline", "models verify")
     verify.add_argument("--lock", type=Path, default=Path("configs/models/lock.json"))
+    verify.add_argument("--registry", type=Path, default=Path("configs/models/registry.yaml"))
     verify.add_argument("--cache-root", type=Path)
     _add_json(verify)
 
@@ -477,6 +479,47 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
     read_only = _run_read_only(args)
     if read_only is not None:
         return read_only
+    if args.command_path == "models resolve-lock" and not args.dry_run:
+        from screen2action.model_assets import resolve_registry_to_file
+
+        lock = resolve_registry_to_file(args.registry, args.lock)
+        return {
+            "status": "resolved",
+            "lock_path": args.lock.as_posix(),
+            "lock_sha256": lock.digest,
+            "roles": [model.role for model in lock.models],
+            "complete_roles": [model.role for model in lock.models if model.complete],
+        }
+    if args.command_path == "models fetch" and not args.dry_run:
+        from screen2action.model_assets import (
+            configured_model_cache_root,
+            fetch_locked_models,
+        )
+
+        configured_acceptance = [
+            value.strip()
+            for value in os.environ.get("SCREEN2ACTION_ACCEPTED_LICENSES", "").split(",")
+            if value.strip()
+        ]
+        cache_root = configured_model_cache_root(root, args.cache_root)
+        return fetch_locked_models(
+            args.lock,
+            cache_root,
+            accepted_licenses=(*args.accept_license, *configured_acceptance),
+            roles=args.role,
+        )
+    if args.command_path == "models verify":
+        from screen2action.model_assets import (
+            configured_model_cache_root,
+            verify_locked_models,
+        )
+
+        cache_root = configured_model_cache_root(root, args.cache_root)
+        return verify_locked_models(
+            args.lock,
+            cache_root,
+            registry_path=args.registry,
+        )
     if getattr(args, "dry_run", False):
         if getattr(args, "config", None) is not None:
             config = load_config(args.config, overrides=getattr(args, "overrides", ()))
@@ -500,10 +543,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         payload = _run_command(args)
         _emit(payload, as_json=bool(args.json))
-        if args.command_path == "doctor" and not payload["ok"]:
+        if args.command_path in {"doctor", "models verify"} and not payload["ok"]:
             return 1
         return 0
-    except (FileNotFoundError, OSError, RuntimeError, ValueError) as error:
+    except (FileNotFoundError, OSError, PermissionError, RuntimeError, ValueError) as error:
         payload = {"error": type(error).__name__, "message": str(error)}
         if bool(getattr(args, "json", False)):
             print(json.dumps(payload, sort_keys=True), file=sys.stderr)

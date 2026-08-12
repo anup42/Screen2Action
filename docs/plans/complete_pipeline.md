@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 2 - model registry and reproducible assets
+**Active milestone:** Milestone 3 - production perception and taxonomy
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -88,16 +88,17 @@ measurement under the stated protocol.
 - [x] Idempotent CPU/GPU bootstrap and smoke shell scripts.
 - [x] CLI/config/doctor tests and full offline verification pass.
 
-### Milestone 2 - model registry and reproducible assets (IN PROGRESS)
+### Milestone 2 - model registry and reproducible assets (COMPLETE)
 
-- [ ] Registry covers ScreenParser, docTR CRNN, MobileNetV3-small, compact
+- [x] Registry covers ScreenParser, docTR CRNN, MobileNetV3-small, compact
       BERT, and MobileViT-S with licenses and I/O contracts.
-- [ ] Immutable lock entries record resolved revisions/files/SHA256 digests.
-- [ ] Resumable cache-root fetch and fully offline verify paths.
-- [ ] Mocked unit tests; opt-in `network`/`gpu` smoke tests.
-- [ ] Full offline verification and checkpoint.
+- [x] Immutable lock entries record resolved revisions/files/SHA256 digests.
+- [x] Resumable cache-root fetch and fully offline verify paths.
+- [x] Mocked unit tests and an opt-in `network` metadata smoke test; GPU is not
+      relevant to asset resolution/fetch.
+- [x] Full offline verification and checkpoint prepared.
 
-### Milestone 3 - production perception and taxonomy
+### Milestone 3 - production perception and taxonomy (IN PROGRESS)
 
 - [ ] Typed detector/OCR/text-detector protocols and normalized image boundary.
 - [ ] ScreenParser conversion/class mapping/diagnostics/root/container policy.
@@ -197,6 +198,13 @@ measurement under the stated protocol.
   extras, bootstrap/smoke scripts, and a CPU training/checkpoint/resume smoke.
   Milestone 1 focused tests (8) and the full suite (51) passed. Milestone 2 is
   active.
+- **2026-08-12:** Milestone 1 and refreshed handoff were pushed; local and
+  remote `main` matched at `c2c69047b92790fb8ef987e48ae39c5e1bdc981b`.
+- **2026-08-12:** Implemented the five-role model registry/lock/fetch/verify
+  system with lazy official providers, role-scoped license acknowledgements,
+  atomic per-role lock finalization, and strict offline SHA256 verification.
+  Official cards corrected ScreenParser to Apache-2.0 and MobileViT to its
+  linked Apple license reference. Milestone 3 is active.
 
 ## Discoveries and surprises
 
@@ -228,6 +236,9 @@ measurement under the stated protocol.
 - **D-005 (configuration):** Keep YAML as the only core runtime dependency.
   All heavy model/data/training/export imports remain lazy and feature-gated;
   no package metadata selects a CUDA wheel.
+- **D-006 (asset lock):** Resolve mutable Hub/package intent first, then
+  finalize local sizes/SHA256 after license-gated fetch. Preserve non-SPDX
+  upstream license terms instead of normalizing them to a convenient license.
 
 ## Validation ledger
 
@@ -253,6 +264,20 @@ measurement under the stated protocol.
 - **2026-08-12:** `python -m screen2action.tools.verify all` after final doctor
   package-version reporting - exit 0; 51 tests and all static checks passed in
   9.9 seconds.
+- **2026-08-12:** `python -m pytest tests/unit/test_model_assets.py
+  tests/unit/test_cli.py tests/unit/test_doctor.py -q` - exit 0; 8 focused
+  tests passed.
+- **2026-08-12:** `screen2action models list --json` and `screen2action models
+  resolve-lock --dry-run --json` - exit 0; five required roles and a
+  deterministic no-write plan were reported.
+- **2026-08-12:** `python -m pytest
+  tests/optional/test_model_assets_network.py -m network -q` - exit 1; the
+  Hugging Face HTTPS connection was reset by the remote/network path before
+  metadata resolution. No file was downloaded and no real-model gate is
+  claimed.
+- **2026-08-12:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
+  Mypy, formatting/compilation, and 54 offline tests passed; one network test
+  was deselected as intended.
 
 ## Remaining blockers and continuation
 

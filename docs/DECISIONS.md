@@ -162,3 +162,15 @@ existing public repository contract and every operational command must compose,
 expand, validate, and snapshot them consistently. PyTorch and all model/data,
 training, AndroidControl, and export packages remain feature extras with lazy
 imports. CUDA PyTorch is installed separately using the official selector.
+
+## ADR-0017: Two-phase immutable model lock
+
+**Status:** accepted.
+
+Registry resolution freezes upstream Hub commits or package/weight-enum
+versions and expected files without claiming local availability. License-gated
+fetch then records observed size and SHA256 after each role, atomically updating
+the same lock so interrupted bundles resume safely. A lock is experiment-ready
+only when every selected role is complete and offline verification passes.
+The MobileViT weight card's non-SPDX `other` license is preserved as
+`LicenseRef-Apple-ML-CVNets`, not normalized to Apache-2.0.
