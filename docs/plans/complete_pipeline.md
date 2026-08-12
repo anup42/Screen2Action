@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
-**Status:** ACTIVE
-**Active milestone:** Completion workflow - final handoff, publication, and archive
+**Status:** COMPLETE
+**Active milestone:** None - implementation plan complete
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -255,6 +255,10 @@ measurement under the stated protocol.
   were formatted, Ruff and Mypy passed, and 137 tests passed with nine opt-in
   network/GPU/slow tests deselected. Implementation milestones 0-9 are
   complete; final publication, handoff snapshot, and source archive remain.
+- **2026-08-13:** Milestone 9 was committed and pushed to the user-supplied
+  private repository. Local and remote `main` matched at
+  `182648fd3661dad64cb623ce0475f2ce42884ff8`; the plan is complete and the
+  final handoff/archive workflow follows this closeout commit.
 
 ## Discoveries and surprises
 
@@ -419,6 +423,8 @@ immutable-input commands are recorded in `docs/GPU_RUNBOOK.md`.
 ## Outcome summary
 
 Implementation milestones 0-9 are complete under the documented offline and
-fixture evidence boundaries. Final handoff publication and the review archive
-are active; real public assets/data, CUDA training, Accurate locked export, and
-mobile measurement remain external gates.
+fixture evidence boundaries. The repository supports the requested production
+workflows, staged training/evaluation interfaces, and partitioned export, with
+portable continuation documentation. Real public assets/data, CUDA training,
+Accurate locked export, exact paper results, and mobile measurement remain
+explicit external gates rather than reproduced claims.
