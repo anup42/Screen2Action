@@ -1,0 +1,13 @@
+[
+  {
+    "id": "rico-1",
+    "screen_id": "100",
+    "app_id": "com.example.calendar",
+    "split": "train",
+    "width": 100,
+    "height": 200,
+    "screen_elements": [
+      {"id": "add", "bbox": [0.7, 0.8, 0.9, 0.95], "type": "icon", "iconClass": "add", "confidence": 1.0}
+    ]
+  }
+]

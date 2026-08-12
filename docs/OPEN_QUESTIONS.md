@@ -19,5 +19,12 @@ kept visible so later experiments do not silently turn defaults into facts.
     latency?
 11. What are the exact ScreenSpot subset definitions for small and dense
     screens?
+12. Which license governs GUIAct/GUIEnv while the official Hub cards and
+    GUICourse repository advertise different identifiers?
+13. What reviewed cross-source application alias map should be frozen for the
+    full public corpus, especially where a source exposes only domain or task
+    identity?
+14. Which licensed RICO screenshot/package metadata release should be joined
+    to RICO Semantics for production icon-taxonomy and app-disjoint use?
 
 Until these are answered, reports must label results as reconstruction results.

@@ -9,7 +9,7 @@ no qualifying implementation evidence exists.
 | Issue | Requirement and evidence | CPU architecture | Production integration | Paper-reference training | Deployment/export |
 | --- | --- | --- | --- | --- | --- |
 | S2A-000 | scaffold/config/verification: root, `configs/`, `tools/verify.py` | complete | partial | partial | not-started |
-| S2A-001 | canonical normalized schemas: `data/schema.py`; schema/geometry tests | complete | partial | partial | partial |
+| S2A-001 | provenance-rich canonical schema 2.0, normalized `xyxy`, content-addressed PNG/Parquet: `data/schema.py`, `data/storage.py` | complete | partial | partial | host-only |
 | S2A-002 | geometry/matching/point-in-target: `ssb/geometry.py`, `matching.py` | complete | complete | complete | host-only |
 | S2A-003 | containment/proximity/ordinal graph: `relations.py`, `hierarchy.py` | complete | partial | partial | host-only |
 | S2A-004 | versioned 10-bit SSB reconstruction codec: `ssb/codec.py` | complete | partial | partial | host-only |
@@ -22,7 +22,7 @@ no qualifying implementation evidence exists.
 | S2A-011 | tiny sparse candidate grounder/crop encoder | complete | not-started | not-started | not-started |
 | S2A-012 | objective loss functions and mask tests | complete | partial | not-started | n/a |
 | S2A-013 | tiny CPU overfit workflow | complete | n/a | not-started | n/a |
-| S2A-014 | adapter/synthetic data framework and toy audits | complete | partial | not-started | n/a |
+| S2A-014 | seven fixture-backed public adapters plus retained synthetic framework and exact reject audits | complete | partial | partial | n/a |
 | S2A-015 | oracle perception interface boundary | complete | not-started | not-started | not-started |
 | S2A-016 | basic trainer/checkpoint/stage helpers | complete | partial | not-started | n/a |
 | S2A-017 | metric/sweep/timing primitives | complete | partial | not-started | n/a |
@@ -35,7 +35,7 @@ no qualifying implementation evidence exists.
 | S2A-024 | model registry/lock/fetch/verify | complete | partial | partial | partial |
 | S2A-025 | public production perception/taxonomy/cache: typed adapters, fake-backed integration tests | complete | partial | partial | host-only |
 | S2A-026 | unified trainable model, batched masks, paper graph/reranker, retention, BERT/MobileViT adapters, typed heads | complete | partial | partial | partial |
-| S2A-027 | public data lake/source adapters/manifest/shards | not-started | not-started | not-started | n/a |
+| S2A-027 | immutable source acquisition, seven adapters, app split, scalable dedup, weak references, manifest enforcement, deterministic shards | complete | partial | partial | n/a |
 | S2A-028 | resumable production perception precompute | not-started | not-started | not-started | n/a |
 | S2A-029 | complete torchrun/DDP stage system | not-started | partial | not-started | n/a |
 | S2A-030 | production evaluation/calibration/reporting | not-started | not-started | not-started | n/a |
@@ -66,3 +66,4 @@ paths are exercised; no status is inferred from architecture-only tests.
 | 12% per-side crop margin | reconstruction ADR-0008 | `runtime/cropper.py`, crop test |
 | Stage 2 positive insertion 0.5 for first two epochs | supplied contract ADR-0005 | `training/stages.py`, adapter/sweep tests |
 | public model IDs and initial detector thresholds | supplied reconstruction | `configs/models/registry.yaml`, `MODEL_PROVENANCE.md` |
+| public source revisions, license notes, and conversion boundaries | upstream evidence plus reconstruction | `configs/data/sources.yaml`, `DATASET_RUNBOOK.md`, ADR-0020 |

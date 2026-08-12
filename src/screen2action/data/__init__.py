@@ -1,6 +1,7 @@
 """Canonical dataset records and adapter boundaries."""
 
 from screen2action.data.schema import (
+    CANONICAL_SCHEMA_VERSION,
     ActionType,
     CommandRecord,
     ConfidenceOutput,
@@ -9,6 +10,8 @@ from screen2action.data.schema import (
     GroundingOutput,
     NodeRecord,
     NodeType,
+    PointSource,
+    RecordProvenance,
     RetrievalCandidate,
     ScreenRecord,
     SelectedNodeRecord,
@@ -18,6 +21,7 @@ from screen2action.data.synthetic import SyntheticExample, make_synthetic_exampl
 from screen2action.data.tokenizer import VocabularyTokenizer
 
 __all__ = [
+    "CANONICAL_SCHEMA_VERSION",
     "ActionType",
     "CommandRecord",
     "ConfidenceOutput",
@@ -26,6 +30,8 @@ __all__ = [
     "GroundingOutput",
     "NodeRecord",
     "NodeType",
+    "PointSource",
+    "RecordProvenance",
     "RetrievalCandidate",
     "SelectedNodeRecord",
     "SerializedSsbRecord",

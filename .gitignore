@@ -14,8 +14,7 @@ venv/
 !.env.example
 
 # Datasets and generated media
-data/raw/
-data/processed/
+/data/
 datasets/
 screenshots/
 *.png

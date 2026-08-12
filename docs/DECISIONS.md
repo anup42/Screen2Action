@@ -228,3 +228,33 @@ screen point are correct. Warm-up, refresh interval, and weight are configured;
 the loss can be disabled and existing held-out temperature scaling used alone.
 Long-press duration remains executor-defined. Scroll deltas and drag duration
 are bounded model outputs.
+
+## ADR-0020: Canonical public-data reconstruction
+
+**Status:** accepted for production integration.
+
+Canonical schema `2.0` adds source/revision/license, content digest, raw and
+canonical app identity, split origin, annotation confidence/masks, matching,
+trace, and synthetic-parent provenance with defaults that continue to load
+legacy fixture records. Images are deterministically converted to RGB PNG and
+content-addressed by SHA256; source metadata streams into per-source Parquet
+partitions. Optional deterministic tar shards contain one image per screen.
+
+Raw revisions are immutable inventories gated by a recorded license
+acknowledgement. Archive extraction rejects absolute/traversing paths. Official
+immutable source commits are registry intent, while local file hashes are the
+actual acquisition evidence. GUIAct/GUIEnv and ScreenSpot retain
+`NOASSERTION` where upstream terms are conflicting or source-dependent rather
+than inventing a convenient license.
+
+App identity is canonicalized before a deterministic app-disjoint split, and
+synthetic records inherit their parent's partition. Production duplicate
+grouping uses exact SHA256, a BK-tree perceptual-hash index, OCR Jaccard, an
+optional frozen embedding gate, union-find, and a deterministic survivor.
+ScreenSpot and its exact/near matches are prohibited outside evaluation.
+
+Because the paper does not disclose reference annotation,
+`public_weak_reference_v1` uses source evidence, then deterministic geometry,
+then high-confidence relation phrases. It writes confidence, method, and masks;
+uncertain labels have no reference loss. These are public reconstruction
+choices, not paper-specified preprocessing.

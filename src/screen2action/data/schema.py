@@ -11,6 +11,8 @@ type Box = tuple[float, float, float, float]
 type Point = tuple[float, float]
 type SerializedTokens = tuple[int, ...]
 
+CANONICAL_SCHEMA_VERSION = "2.0"
+
 
 class NodeType(StrEnum):
     """Canonical semantic node types."""
@@ -34,6 +36,14 @@ class ActionType(StrEnum):
     SCROLL = "scroll"
     LONG_PRESS = "long_press"
     UNKNOWN = "unknown"
+
+
+class PointSource(StrEnum):
+    """Provenance of a command target point."""
+
+    TRUE = "true"
+    PSEUDO_BOX_CENTER = "pseudo_box_center"
+    NONE = "none"
 
 
 class RelationType(StrEnum):
@@ -92,6 +102,62 @@ def _validate_point(point: Point, field_name: str) -> None:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordProvenance:
+    """Backward-compatible source and transformation provenance.
+
+    Empty defaults preserve construction of the original version-1 records.
+    Production normalization fills every field that is applicable and writes
+    the flattened values to Parquet.
+    """
+
+    schema_version: str = CANONICAL_SCHEMA_VERSION
+    source_dataset: str = ""
+    source_item_id: str = ""
+    source_revision: str = ""
+    source_license_ack_id: str = ""
+    screen_sha256: str = ""
+    image_format: str = ""
+    app_id_canonical: str = ""
+    app_id_raw: str = ""
+    domain_id_canonical: str = ""
+    domain_id_raw: str = ""
+    platform: str = "unknown"
+    split_origin: str = "source"
+    annotation_source: str = "unknown"
+    annotation_confidence: float | None = None
+    label_masks: Mapping[str, bool] = field(default_factory=dict)
+    target_match_method: str = "unknown"
+    reference_match_method: str = "none"
+    action_trace_id: str = ""
+    action_step_id: str = ""
+    synthetic_parent_id: str = ""
+    transformation_provenance: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.schema_version:
+            raise ValueError("provenance schema_version cannot be empty")
+        if self.annotation_confidence is not None:
+            _require_finite(self.annotation_confidence, "annotation_confidence")
+            if not 0.0 <= self.annotation_confidence <= 1.0:
+                raise ValueError("annotation_confidence must be in [0, 1]")
+        if self.screen_sha256 and (
+            len(self.screen_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in self.screen_sha256)
+        ):
+            raise ValueError("screen_sha256 must be a lowercase SHA256 digest")
+        if not all(
+            isinstance(key, str) and isinstance(value, bool)
+            for key, value in self.label_masks.items()
+        ):
+            raise ValueError("label_masks must map strings to booleans")
+        if not all(
+            isinstance(key, str) and isinstance(value, str)
+            for key, value in self.transformation_provenance.items()
+        ):
+            raise ValueError("transformation_provenance must map strings to strings")
+
+
+@dataclass(frozen=True, slots=True)
 class ElementAnnotation:
     """Source annotation for one visible screen element."""
 
@@ -103,6 +169,10 @@ class ElementAnnotation:
     icon_class_id: int | None = None
     parent_element_id: str | None = None
     metadata: Mapping[str, str] = field(default_factory=dict)
+    annotation_source: str = "source"
+    annotation_confidence: float | None = 1.0
+    label_masks: Mapping[str, bool] = field(default_factory=dict)
+    provenance: RecordProvenance = field(default_factory=RecordProvenance)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "node_type", NodeType(self.node_type))
@@ -111,6 +181,17 @@ class ElementAnnotation:
             raise ValueError("actionability_labels must contain four entries")
         if self.icon_class_id is not None and self.icon_class_id < 0:
             raise ValueError("icon_class_id must be non-negative")
+        if not self.annotation_source:
+            raise ValueError("annotation_source cannot be empty")
+        if self.annotation_confidence is not None:
+            _require_finite(self.annotation_confidence, "annotation_confidence")
+            if not 0.0 <= self.annotation_confidence <= 1.0:
+                raise ValueError("annotation_confidence must be in [0, 1]")
+        if not all(
+            isinstance(key, str) and isinstance(value, bool)
+            for key, value in self.label_masks.items()
+        ):
+            raise ValueError("label_masks must map strings to booleans")
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +206,7 @@ class ScreenRecord:
     split: str
     source: str
     elements: tuple[ElementAnnotation, ...] = ()
+    provenance: RecordProvenance = field(default_factory=RecordProvenance)
 
     def __post_init__(self) -> None:
         if not self.screen_id or not self.app_id:
@@ -148,6 +230,9 @@ class CommandRecord:
     action_parameters: Mapping[str, float] = field(default_factory=dict)
     relation_type: str = "direct"
     reference_element_ids: tuple[str, ...] = ()
+    target_point_source: PointSource = PointSource.NONE
+    label_masks: Mapping[str, bool] = field(default_factory=dict)
+    provenance: RecordProvenance = field(default_factory=RecordProvenance)
 
     def __post_init__(self) -> None:
         if not self.command_id or not self.screen_id:
@@ -155,9 +240,19 @@ class CommandRecord:
         if not self.text.strip():
             raise ValueError("command text cannot be empty")
         object.__setattr__(self, "action_type", ActionType(self.action_type))
+        object.__setattr__(self, "target_point_source", PointSource(self.target_point_source))
         _validate_box(self.target_box_xyxy_norm, "target_box_xyxy_norm")
         if self.target_point_xy_norm is not None:
             _validate_point(self.target_point_xy_norm, "target_point_xy_norm")
+            if self.target_point_source is PointSource.NONE:
+                object.__setattr__(self, "target_point_source", PointSource.TRUE)
+        elif self.target_point_source is not PointSource.NONE:
+            raise ValueError("target_point_source requires target_point_xy_norm")
+        if not all(
+            isinstance(key, str) and isinstance(value, bool)
+            for key, value in self.label_masks.items()
+        ):
+            raise ValueError("label_masks must map strings to booleans")
 
 
 @dataclass(frozen=True, slots=True)

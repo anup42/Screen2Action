@@ -1,56 +1,90 @@
-schema_version: 1
-registry_id: screen2action_public_sources_v1
+schema_version: 2
+registry_id: screen2action_public_sources_v2
 raw_root_environment: SCREEN2ACTION_DATA_ROOT
 sources:
   guicourse_guiact:
-    provider: official_gui_course_release
-    revision: unresolved
+    provider: huggingface_dataset
+    upstream_id: yiye2023/GUIAct
+    source_url: https://huggingface.co/datasets/yiye2023/GUIAct
+    project_url: https://github.com/RUCBM/GUICourse
+    revision: 9f3341d4670624aa6bf4a6eb71544d1b09961c0e
     license_identifier: NOASSERTION
+    license_note: >-
+      The Hugging Face card currently says Apache-2.0 while the official GUICourse
+      repository says CC-BY-4.0. Acceptance is mandatory until the conflict is resolved.
     acceptance_required: true
     train_eligible: true
     subsets: [web_single, smartphone]
     note: Convert only examples whose labels map without semantic coercion.
   guicourse_guienv:
-    provider: official_gui_course_release
-    revision: unresolved
+    provider: huggingface_dataset
+    upstream_id: yiye2023/GUIEnv
+    source_url: https://huggingface.co/datasets/yiye2023/GUIEnv
+    project_url: https://github.com/RUCBM/GUICourse
+    revision: e2aa2d497ad2d8710dd59d0be6571ebba9265a6a
     license_identifier: NOASSERTION
+    license_note: >-
+      The Hugging Face card currently says Apache-2.0 while the official GUICourse
+      repository says CC-BY-4.0. Acceptance is mandatory until the conflict is resolved.
     acceptance_required: true
     train_eligible: true
     optional: true
     note: Optional grounding and OCR pretraining source.
   amex:
-    provider: official_amex_release
-    revision: unresolved
-    license_identifier: NOASSERTION
+    provider: huggingface_dataset
+    upstream_id: Yuxiang007/AMEX
+    source_url: https://huggingface.co/datasets/Yuxiang007/AMEX
+    project_url: https://yuxiangchai.github.io/AMEX/
+    revision: 17196b29c88dd48a7fb90ef9131bc5c7bf39f26e
+    license_identifier: CC-BY-4.0
+    license_note: Official Hugging Face dataset card license; review source terms before use.
     acceptance_required: true
     train_eligible: true
-    note: Supports sample-first and verified multipart archive assembly.
+    multipart_repair: zip_fix
+    note: Supports sample-first and verified multipart ZIP repair.
   android_control:
-    provider: google_research
-    revision: unresolved
-    license_identifier: NOASSERTION
+    provider: google_research_gcs
+    upstream_id: google-research/google-research/android_control
+    source_url: https://github.com/google-research/google-research/tree/master/android_control
+    data_url: gs://gresearch/android_control/
+    revision: 4dbbf8f8acbac234b7f1bdc0c38707b314db54b2
+    license_identifier: Apache-2.0
+    license_note: Official Google Research release; TensorFlow is an optional parser dependency.
     acceptance_required: true
     train_eligible: true
-    note: Preserve official TFRecord episode, step, and split identity.
+    note: Preserve official GZIP TFRecord episode, step, and split identity.
   wave_ui:
-    provider: agentsea_official
-    revision: unresolved
-    license_identifier: NOASSERTION
+    provider: huggingface_dataset
+    upstream_id: agentsea/wave-ui
+    source_url: https://huggingface.co/datasets/agentsea/wave-ui
+    revision: 21dc5aa1b39c038aea30f4572d80edef592b7989
+    license_identifier: LicenseRef-WaveUI-per-source
+    license_note: >-
+      Compilation license delegates to each row's source license; normalization preserves
+      the source field and rejects rows whose source license cannot be acknowledged.
     acceptance_required: true
     train_eligible: true
-    note: Official WaveUI source only.
+    note: Official AgentSea WaveUI source only.
   rico_semantics:
-    provider: official_rico_release
-    revision: unresolved
-    license_identifier: NOASSERTION
+    provider: git_repository
+    upstream_id: google-research-datasets/rico_semantics
+    source_url: https://github.com/google-research-datasets/rico_semantics
+    revision: 6e1a71f1490a68cc1f4f3109397adeca7c6b58df
+    license_identifier: CC-BY-SA-4.0
+    license_note: Official archived Google Research Datasets repository.
     acceptance_required: true
     train_eligible: true
     optional: true
     note: Optional icon-semantic and label-association source.
   screenspot:
-    provider: seeclick_official
-    revision: unresolved
+    provider: manual_official_archive
+    upstream_id: njucckevin/SeeClick/ScreenSpot
+    source_url: https://github.com/njucckevin/SeeClick#gui-grounding-benchmark-screenspot
+    revision: 0ef37ac4d7aaf37ba7b990e3e3c3ca77e1fb8f93
     license_identifier: NOASSERTION
+    license_note: >-
+      SeeClick requires users to follow each incorporated dataset's original terms.
+      Register the official archive only after reviewing those terms.
     acceptance_required: true
     train_eligible: false
     evaluation_only: true

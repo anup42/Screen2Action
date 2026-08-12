@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 5 - canonical data lake and audits
+**Active milestone:** Milestone 6 - resumable perception precompute
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -130,16 +130,16 @@ measurement under the stated protocol.
 
 ### Milestone 5 - canonical data lake and audits
 
-- [ ] Backward-compatible provenance-rich schemas and environment-root layout.
-- [ ] Source registry and fixture adapters for GUIAct, GUIEnv, AMEX,
+- [x] Backward-compatible provenance-rich schemas and environment-root layout.
+- [x] Source registry and fixture adapters for GUIAct, GUIEnv, AMEX,
       AndroidControl, WaveUI, RICO Semantics, and ScreenSpot.
-- [ ] Explicit license-gated resumable download/register-local boundaries.
-- [ ] App-disjoint split creation with alias/collision audit.
-- [ ] Scalable staged dedup grouping/survivor/removal audit.
-- [ ] Hard ScreenSpot train/calibration/model-selection leakage guard.
-- [ ] `public_weak_reference_v1` annotation with confidence/provenance.
-- [ ] Manifest/shard creation and digest enforcement.
-- [ ] CLI fixture workflow exercises register -> normalize -> validate -> split
+- [x] Explicit license-gated resumable download/register-local boundaries.
+- [x] App-disjoint split creation with alias/collision audit.
+- [x] Scalable staged dedup grouping/survivor/removal audit.
+- [x] Hard ScreenSpot train/calibration/model-selection leakage guard.
+- [x] `public_weak_reference_v1` annotation with confidence/provenance.
+- [x] Manifest/shard creation and digest enforcement.
+- [x] CLI fixture workflow exercises register -> normalize -> validate -> split
       -> dedup -> manifest without copyrighted assets.
 
 ### Milestone 6 - resumable perception precompute
@@ -216,6 +216,13 @@ measurement under the stated protocol.
   parity, exact relation reranking, learned retention, offline compact-BERT and
   MobileViT adapters, sparse absolute-box conditioning, and typed action and
   confidence losses. Milestone 5 is active; public weights remain unexecuted.
+- **2026-08-13:** Implemented canonical schema 2.0 and the environment-rooted
+  data lake; license-gated immutable acquisition; fixture-backed adapters for
+  all seven registered sources; app-disjoint split creation; indexed staged
+  deduplication; weak-reference reconstruction; frozen digest-enforced
+  manifests; and deterministic training shards. Eighteen focused offline tests
+  pass. Full public downloads and source-quality audits remain external gates;
+  Milestone 6 is active.
 
 ## Discoveries and surprises
 
@@ -258,6 +265,10 @@ measurement under the stated protocol.
   control, compute frame retention before commands, name paper and CPU graph
   variants explicitly, and treat `grounding_correctness_v1` as a configurable
   reconstruction rather than a paper-defined confidence target.
+- **D-009 (public data boundary):** Preserve ambiguous upstream license labels,
+  reject records lacking safe semantics/app identity, split before synthetic
+  augmentation, and treat weak references and dedup thresholds as versioned
+  public reconstructions. Fixture success is not full-corpus validation.
 
 ## Validation ledger
 
@@ -305,6 +316,14 @@ measurement under the stated protocol.
 - **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
   Mypy, formatting/compilation, and 87 offline tests passed; three opt-in
   network/GPU tests were deselected as intended.
+- **2026-08-13:** focused Milestone 5 data tests - exit 0; 18 schema/adapter,
+  immutable asset, archive safety, app-split, scalable dedup, manifest, shard,
+  and end-to-end CLI fixture tests passed. The optional live revision test was
+  not used as evidence for full data acquisition.
+- **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 146
+  Python files formatted, Ruff and Mypy passed, and 105 offline tests passed
+  with seven opt-in network/GPU tests deselected. Milestone 5 is fixture/offline
+  complete; public-corpus execution remains unverified.
 
 ## Remaining blockers and continuation
 

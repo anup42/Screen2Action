@@ -1,0 +1,31 @@
+[
+  {
+    "id": "amex-episode-1",
+    "episode_id": "episode-1",
+    "split": "train",
+    "instruction": "Open the cart",
+    "steps": [
+      {
+        "step_id": 1,
+        "action": "TAP",
+        "touch_coord": [50, 75],
+        "lift_coord": [50, 75],
+        "device_dim": [100, 200],
+        "package_name": "com.example.shop",
+        "image_path": "episode-1-1.png",
+        "clickable_elements": [
+          {"id": "cart", "bbox": [20, 50, 80, 100], "xml_desc": ["Cart"], "functionality": "open cart"}
+        ]
+      },
+      {
+        "step_id": 2,
+        "action": "TASK_COMPLETE",
+        "touch_coord": [0, 0],
+        "lift_coord": [0, 0],
+        "device_dim": [100, 200],
+        "package_name": "com.example.shop",
+        "image_path": "episode-1-2.png"
+      }
+    ]
+  }
+]

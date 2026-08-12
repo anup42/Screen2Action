@@ -1,0 +1,24 @@
+[
+  {
+    "id": "wave-1",
+    "split": "train",
+    "image_size": [1, 1],
+    "image_bytes_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "instruction": "open settings",
+    "bbox": [0.1, 0.1, 0.9, 0.9],
+    "source": "roboflow",
+    "source_license": "MIT",
+    "platform": "web",
+    "domain": "example.org",
+    "name": "settings",
+    "type": "button"
+  },
+  {
+    "id": "wave-reject",
+    "split": "train",
+    "image_size": [1, 1],
+    "instruction": "ambiguous",
+    "bbox": [0.1, 0.1, 0.9, 0.9],
+    "platform": "web"
+  }
+]

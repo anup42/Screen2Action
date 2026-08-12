@@ -1,0 +1,13 @@
+[
+  {
+    "id": "screenspot-1",
+    "img_filename": "desktop/example.png",
+    "instruction": "click search",
+    "bbox": [20, 10, 80, 40],
+    "image_size": {"width": 100, "height": 50},
+    "data_type": "icon",
+    "data_souce": "Windows",
+    "app_id": "example-browser",
+    "split": "train"
+  }
+]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from screen2action.data.adapters.base import AdapterAudit
+from screen2action.data.adapters.base import AdapterAudit, AdapterReject, CanonicalExample
 from screen2action.data.schema import CommandRecord, ScreenRecord
 from screen2action.data.synthetic import SyntheticExample, make_synthetic_examples
 
@@ -21,6 +21,15 @@ class SyntheticAdapter:
     def screens(self) -> tuple[ScreenRecord, ...]:
         return (self._examples()[0].screen,)
 
+    def examples(self) -> tuple[CanonicalExample, ...]:
+        examples = self._examples()
+        return (
+            CanonicalExample(
+                screen=examples[0].screen,
+                commands=tuple(example.command for example in examples),
+            ),
+        )
+
     def commands(self) -> tuple[CommandRecord, ...]:
         return tuple(example.command for example in self._examples())
 
@@ -34,3 +43,6 @@ class SyntheticAdapter:
             rejected_commands=0,
             action_counts={"click": len(commands)},
         )
+
+    def rejects(self) -> tuple[AdapterReject, ...]:
+        return ()

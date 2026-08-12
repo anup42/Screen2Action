@@ -1,0 +1,18 @@
+[
+  {
+    "id": "android-control-1",
+    "episode_id": "42",
+    "split": "train",
+    "app_id": "com.example.mail",
+    "goal": "Open the first message",
+    "screenshots": [
+      {"__bytes_base64__": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="},
+      {"__bytes_base64__": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="}
+    ],
+    "screenshot_widths": [100, 100],
+    "screenshot_heights": [200, 200],
+    "actions": [{"action_type": "click", "x": 50, "y": 60}],
+    "step_instructions": ["Tap the first message"],
+    "elements_by_step": [[{"id": "message", "bbox": [10, 20, 90, 80], "type": "button", "text": "First message"}]]
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "guienv-1",
+    "split": "train",
+    "image_id": "example.org-home",
+    "domain": "example.org",
+    "image_size": {"width": 200, "height": 100},
+    "task_type": "text2bbox",
+    "question": "Sign in",
+    "answer": {"absolute": ["<box>20, 10, 80, 40</box>"]}
+  }
+]

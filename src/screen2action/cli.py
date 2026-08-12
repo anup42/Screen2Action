@@ -157,6 +157,7 @@ def _parser() -> argparse.ArgumentParser:
     download.add_argument("--sample", type=int)
     download.add_argument("--accept-license", action="store_true")
     download.add_argument("--data-root", type=Path)
+    download.add_argument("--registry", type=Path, default=Path("configs/data/sources.yaml"))
     _add_dry_run(download)
     _add_json(download)
     register = _leaf(
@@ -170,6 +171,7 @@ def _parser() -> argparse.ArgumentParser:
     register.add_argument("--revision", required=True)
     register.add_argument("--accept-license", action="store_true")
     register.add_argument("--data-root", type=Path)
+    register.add_argument("--registry", type=Path, default=Path("configs/data/sources.yaml"))
     _add_dry_run(register)
     _add_json(register)
     inspect = _leaf(data_commands, "inspect", "inspect source or manifest metadata", "data inspect")
@@ -182,6 +184,7 @@ def _parser() -> argparse.ArgumentParser:
     normalize.add_argument("--revision", required=True)
     normalize.add_argument("--dataset-version", required=True)
     normalize.add_argument("--data-root", type=Path)
+    normalize.add_argument("--registry", type=Path, default=Path("configs/data/sources.yaml"))
     _add_config(normalize)
     _add_dry_run(normalize)
     _add_json(normalize)
@@ -197,11 +200,17 @@ def _parser() -> argparse.ArgumentParser:
     split.add_argument("--dataset", type=Path, required=True)
     split.add_argument("--output", type=Path, required=True)
     split.add_argument("--seed", type=int, default=7)
+    split.add_argument("--alias-map", type=Path)
+    split.add_argument("--train-ratio", type=float, default=0.8)
+    split.add_argument("--val-ratio", type=float, default=0.1)
+    split.add_argument("--test-ratio", type=float, default=0.1)
     _add_dry_run(split)
     _add_json(split)
     dedup = _leaf(data_commands, "dedup", "group and remove cross-split duplicates", "data dedup")
     dedup.add_argument("--dataset", type=Path, required=True)
     dedup.add_argument("--output", type=Path, required=True)
+    dedup.add_argument("--split-plan", type=Path, required=True)
+    dedup.add_argument("--embeddings", type=Path)
     _add_config(dedup, default="configs/data/dedup.yaml")
     _add_dry_run(dedup)
     _add_json(dedup)
@@ -224,6 +233,10 @@ def _parser() -> argparse.ArgumentParser:
     )
     manifest.add_argument("--dataset", type=Path, required=True)
     manifest.add_argument("--output", type=Path, required=True)
+    manifest.add_argument("--split-plan", type=Path, required=True)
+    manifest.add_argument("--dedup-audit", type=Path, required=True)
+    manifest.add_argument("--taxonomy", type=Path, required=True)
+    manifest.add_argument("--preprocessing-policy", default="canonical_rgb_png_v1")
     _add_dry_run(manifest)
     _add_json(manifest)
     shards = _leaf(
@@ -558,6 +571,203 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
             cache_root,
             registry_path=args.registry,
         )
+    if args.command_path == "data download" and not args.dry_run:
+        from screen2action.data.assets import download_registered_source
+        from screen2action.data.layout import DataLayout
+        from screen2action.data.registry import load_source_registry
+
+        registry = load_source_registry(args.registry)
+        layout = DataLayout.configured(args.data_root, repository_root=root)
+        manifest = download_registered_source(
+            registry,
+            layout,
+            args.source,
+            requested_revision=args.revision,
+            sample_size=args.sample,
+            accept_license=args.accept_license,
+        )
+        suffix = f"sample-{args.sample}" if args.sample is not None else "full"
+        return {
+            "status": "registered",
+            "source": manifest.source,
+            "revision": manifest.revision,
+            "sample_size": manifest.sample_size,
+            "license_acknowledgement_id": manifest.license_acknowledgement_id,
+            "files": len(manifest.files),
+            "bytes": sum(item.size for item in manifest.files),
+            "manifest_digest": manifest.digest,
+            "raw_path": layout.raw_revision(manifest.source, manifest.revision)
+            .joinpath(suffix)
+            .as_posix(),
+        }
+    if args.command_path == "data register-local" and not args.dry_run:
+        from screen2action.data.assets import register_local_source
+        from screen2action.data.layout import DataLayout
+        from screen2action.data.registry import load_source_registry
+
+        registry = load_source_registry(args.registry)
+        layout = DataLayout.configured(args.data_root, repository_root=root)
+        manifest = register_local_source(
+            registry,
+            layout,
+            args.source,
+            args.path,
+            args.revision,
+            accept_license=args.accept_license,
+        )
+        return {
+            "status": "registered",
+            "source": manifest.source,
+            "revision": manifest.revision,
+            "license_acknowledgement_id": manifest.license_acknowledgement_id,
+            "files": len(manifest.files),
+            "bytes": sum(item.size for item in manifest.files),
+            "manifest_digest": manifest.digest,
+            "raw_path": layout.raw_revision(manifest.source, manifest.revision).as_posix(),
+        }
+    if args.command_path == "data normalize" and not args.dry_run:
+        from screen2action.data.layout import DataLayout
+        from screen2action.data.registry import load_source_registry
+        from screen2action.data.storage import normalize_registered_source
+
+        if args.config is not None:
+            load_config(args.config, overrides=args.overrides)
+        registry = load_source_registry(args.registry)
+        layout = DataLayout.configured(args.data_root, repository_root=root)
+        return dataclasses.asdict(
+            normalize_registered_source(
+                registry,
+                layout,
+                args.source,
+                args.revision,
+                args.dataset_version,
+            )
+        )
+    if args.command_path == "data validate":
+        from screen2action.data.manifest import verify_data_manifest
+        from screen2action.data.storage import validate_canonical_dataset
+
+        if args.path.is_file():
+            payload = json.loads(args.path.read_text(encoding="utf-8"))
+            if "manifest_digest" not in payload:
+                raise ValueError("JSON file is not a frozen data manifest")
+            return dataclasses.asdict(verify_data_manifest(args.path))
+        return validate_canonical_dataset(args.path)
+    if args.command_path == "data split" and not args.dry_run:
+        from screen2action.data.splits import create_app_disjoint_plan, write_split_plan
+        from screen2action.data.storage import read_table_rows
+
+        aliases: Mapping[str, str] = {}
+        if args.alias_map is not None:
+            loaded_aliases = _load_yaml_mapping(args.alias_map)
+            aliases_value = loaded_aliases.get("aliases", loaded_aliases)
+            if not isinstance(aliases_value, dict) or not all(
+                isinstance(key, str) and isinstance(value, str)
+                for key, value in aliases_value.items()
+            ):
+                raise ValueError("alias map must map raw app IDs to canonical app IDs")
+            aliases = cast(dict[str, str], aliases_value)
+        plan = create_app_disjoint_plan(
+            read_table_rows(args.dataset, "screens"),
+            seed=args.seed,
+            ratios=(args.train_ratio, args.val_ratio, args.test_ratio),
+            alias_map=aliases,
+        )
+        write_split_plan(plan, args.output)
+        return {
+            "status": "written",
+            "output": args.output.as_posix(),
+            "policy_version": plan.policy_version,
+            "screens": len(plan.assignments),
+            "apps": len(plan.app_assignments),
+            "alias_groups": len(plan.aliases),
+            "collisions": len(plan.collisions),
+        }
+    if args.command_path == "data dedup" and not args.dry_run:
+        from screen2action.data.dedup import deduplicate_canonical_dataset
+        from screen2action.data.splits import load_split_assignments
+
+        config = load_config(args.config, overrides=args.overrides)
+        embeddings = None
+        if args.embeddings is not None:
+            raw_embeddings = json.loads(args.embeddings.read_text(encoding="utf-8"))
+            if not isinstance(raw_embeddings, dict):
+                raise ValueError("embedding file must map screen IDs to vectors")
+            embeddings = {
+                str(key): tuple(float(value) for value in values)
+                for key, values in raw_embeddings.items()
+            }
+        values = config.values
+        return deduplicate_canonical_dataset(
+            args.dataset,
+            load_split_assignments(args.split_plan),
+            args.output,
+            perceptual_hash_distance_threshold=int(
+                float(str(values.get("perceptual_hash_distance_threshold", 4)))
+            ),
+            ocr_jaccard_threshold=float(str(values.get("ocr_jaccard_threshold", 0.90))),
+            embedding_similarity_threshold=float(
+                str(values.get("image_embedding_similarity_threshold", 0.98))
+            ),
+            embeddings=embeddings,
+        )
+    if args.command_path == "data annotate-references" and not args.dry_run:
+        from screen2action.data.references import annotate_public_weak_references
+
+        return annotate_public_weak_references(
+            args.dataset,
+            args.output,
+            minimum_confidence=args.minimum_confidence,
+        )
+    if args.command_path == "data build-manifest" and not args.dry_run:
+        from screen2action.data.manifest import build_data_manifest
+
+        return build_data_manifest(
+            args.dataset,
+            args.output,
+            split_plan=args.split_plan,
+            dedup_audit=args.dedup_audit,
+            taxonomy=args.taxonomy,
+            preprocessing_policy=args.preprocessing_policy,
+        )
+    if args.command_path == "data build-shards" and not args.dry_run:
+        from screen2action.data.shards import build_webdataset_shards
+
+        return build_webdataset_shards(
+            args.manifest,
+            args.output,
+            max_samples=args.max_samples,
+        )
+    if args.command_path == "data stats":
+        from screen2action.data.storage import canonical_stats
+
+        return canonical_stats(args.path)
+    if args.command_path == "data inspect":
+        from screen2action.data.assets import RAW_MANIFEST, verify_raw_source
+        from screen2action.data.manifest import verify_data_manifest
+        from screen2action.data.storage import DATASET_METADATA, canonical_stats
+
+        if args.path.is_dir() and (args.path / RAW_MANIFEST).is_file():
+            manifest = verify_raw_source(args.path)
+            return {
+                "kind": "raw_source",
+                "source": manifest.source,
+                "revision": manifest.revision,
+                "files": len(manifest.files),
+                "bytes": sum(item.size for item in manifest.files),
+                "manifest_digest": manifest.digest,
+            }
+        if args.path.is_dir() and (args.path / DATASET_METADATA).is_file():
+            return {"kind": "canonical_dataset", **canonical_stats(args.path)}
+        if args.path.is_file():
+            payload = json.loads(args.path.read_text(encoding="utf-8"))
+            if "manifest_digest" in payload:
+                return {
+                    "kind": "data_manifest",
+                    **dataclasses.asdict(verify_data_manifest(args.path)),
+                }
+            return {"kind": "json", "keys": sorted(payload) if isinstance(payload, dict) else []}
+        raise ValueError(f"unrecognized data path: {args.path}")
     if args.command_path == "taxonomy icons build" and not args.dry_run:
         from screen2action.perception.taxonomy import (
             build_icon_taxonomy,

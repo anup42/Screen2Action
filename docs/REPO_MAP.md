@@ -2,7 +2,7 @@
 
 | Path | Responsibility | Generated or external state |
 | --- | --- | --- |
-| `src/screen2action/data/` | canonical schemas, adapters, splits, dedup, manifests, shards | none |
+| `src/screen2action/data/` | schema/layout/storage, immutable assets, seven source adapters, app splits, dedup, weak references, manifests, shards | data lake external |
 | `src/screen2action/perception/` | detector/OCR/icon protocols, adapters, orchestration, cache | weights/cache external |
 | `src/screen2action/ssb/` | geometry, typed relations, codec, BudgetSelect, validation | none |
 | `src/screen2action/models/` | node/graph/command/crop/retrieval/grounding modules | weights external |
