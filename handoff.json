@@ -3,10 +3,10 @@
   "commands": {
     "evaluate": "screen2action evaluate --config configs/eval/default.yaml --device cpu --dry-run",
     "last_successful": [
-      "python -m screen2action.tools.verify all",
       "python -m pytest tests/unit/test_handoff.py -q",
       "python -m screen2action.tools.verify all",
       "screen2action doctor --device cpu --json",
+      "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all",
@@ -18,10 +18,10 @@
     "resume": "screen2action train smoke --device cpu"
   },
   "data_manifests": [],
-  "generated_at_utc": "2026-08-12T19:47:47+00:00",
+  "generated_at_utc": "2026-08-12T20:50:06+00:00",
   "git": {
     "branch": "main",
-    "commit": "4444a684275749894bcce7ac80a42ed2333c7818",
+    "commit": "8ff118e1bfe7d57cac2a1f96034f8cda350f4daa",
     "dirty": false,
     "dirty_entry_count": 0,
     "generated_files_excluded_from_dirty_check": [
@@ -41,7 +41,7 @@
     "os": "Windows",
     "os_release": "11",
     "python": "3.12.10",
-    "repository_volume_free_bytes": 32900227072
+    "repository_volume_free_bytes": 32854966272
   },
   "models": {
     "lock_path": "configs/models/lock.json",
@@ -52,7 +52,7 @@
   },
   "perception_cache_manifests": [],
   "plan": {
-    "active_milestone": "Milestone 7 - GPU/DDP stage training",
+    "active_milestone": "Milestone 8 - evaluation, calibration, sweeps, and reports",
     "active_path": "docs/plans/complete_pipeline.md",
     "completed_milestones": [
       "Milestone 0 - repository truth and resumable handoff",
@@ -61,7 +61,8 @@
       "Milestone 3 - production perception and taxonomy",
       "Milestone 4 - unified trainable paper-reference model",
       "Milestone 5 - canonical data lake and audits",
-      "Milestone 6 - resumable perception precompute"
+      "Milestone 6 - resumable perception precompute",
+      "Milestone 7 - GPU/DDP stage training"
     ]
   },
   "unresolved_decisions": [
@@ -78,7 +79,10 @@
     "What are the exact ScreenSpot subset definitions for small and dense screens?",
     "Which license governs GUIAct/GUIEnv while the official Hub cards and GUICourse repository advertise different identifiers?",
     "What reviewed cross-source application alias map should be frozen for the full public corpus, especially where a source exposes only domain or task identity?",
-    "Which licensed RICO screenshot/package metadata release should be joined to RICO Semantics for production icon-taxonomy and app-disjoint use?"
+    "Which licensed RICO screenshot/package metadata release should be joined to RICO Semantics for production icon-taxonomy and app-disjoint use?",
+    "Did the paper jointly optimize detector-native losses with downstream losses, and if so what update ratio and optimizer state sharing were used?",
+    "Which exact CRNN alphabet, Unicode normalization, augmentation, and CTC blank-token convention were used for UI-specific OCR fine-tuning?",
+    "Which operations were quantized for the reported mobile model, including activation granularity, calibration observer, backend, and fallback policy?"
   ],
   "versions": {
     "config_schema": 1,

@@ -5,8 +5,8 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: Milestone 7 - GPU/DDP stage training
-- Git branch/commit: `main` / `4444a684275749894bcce7ac80a42ed2333c7818`
+- Active milestone: Milestone 8 - evaluation, calibration, sweeps, and reports
+- Git branch/commit: `main` / `8ff118e1bfe7d57cac2a1f96034f8cda350f4daa`
 - Source dirty at snapshot: `false`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
@@ -23,6 +23,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - Milestone 4 - unified trainable paper-reference model
 - Milestone 5 - canonical data lake and audits
 - Milestone 6 - resumable perception precompute
+- Milestone 7 - GPU/DDP stage training
 
 ## Exact continuation commands
 
@@ -32,10 +33,10 @@ architecture/runbook documents listed in `AGENTS.md`.
 
 ## Last successful commands
 
-- `python -m screen2action.tools.verify all`
 - `python -m pytest tests/unit/test_handoff.py -q`
 - `python -m screen2action.tools.verify all`
 - `screen2action doctor --device cpu --json`
+- `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
@@ -68,6 +69,9 @@ architecture/runbook documents listed in `AGENTS.md`.
 - Which license governs GUIAct/GUIEnv while the official Hub cards and GUICourse repository advertise different identifiers?
 - What reviewed cross-source application alias map should be frozen for the full public corpus, especially where a source exposes only domain or task identity?
 - Which licensed RICO screenshot/package metadata release should be joined to RICO Semantics for production icon-taxonomy and app-disjoint use?
+- Did the paper jointly optimize detector-native losses with downstream losses, and if so what update ratio and optimizer state sharing were used?
+- Which exact CRNN alphabet, Unicode normalization, augmentation, and CTC blank-token convention were used for UI-specific OCR fine-tuning?
+- Which operations were quantized for the reported mobile model, including activation granularity, calibration observer, backend, and fallback policy?
 
 ## Machine-readable state
 
