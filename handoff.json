@@ -10,16 +10,17 @@
       "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all",
+      "python -m screen2action.tools.verify all",
       "python -m screen2action.tools.verify all"
     ],
     "refresh_handoff": "screen2action handoff snapshot",
     "resume": "screen2action train smoke --device cpu"
   },
   "data_manifests": [],
-  "generated_at_utc": "2026-08-12T18:43:00+00:00",
+  "generated_at_utc": "2026-08-12T19:28:41+00:00",
   "git": {
     "branch": "main",
-    "commit": "aaeb0ea698713f4aa1096abe35faf72e96a9dfd0",
+    "commit": "93f55d615e84be7f8a04f42fe85e36c8a33331ae",
     "dirty": false,
     "dirty_entry_count": 0,
     "generated_files_excluded_from_dirty_check": [
@@ -39,7 +40,7 @@
     "os": "Windows",
     "os_release": "11",
     "python": "3.12.10",
-    "repository_volume_free_bytes": 32581545984
+    "repository_volume_free_bytes": 32878080000
   },
   "models": {
     "lock_path": "configs/models/lock.json",
@@ -50,14 +51,15 @@
   },
   "perception_cache_manifests": [],
   "plan": {
-    "active_milestone": "Milestone 5 - canonical data lake and audits",
+    "active_milestone": "Milestone 6 - resumable perception precompute",
     "active_path": "docs/plans/complete_pipeline.md",
     "completed_milestones": [
       "Milestone 0 - repository truth and resumable handoff",
       "Milestone 1 - typed configuration, CLI, and environment diagnostics",
       "Milestone 2 - model registry and reproducible assets",
       "Milestone 3 - production perception and taxonomy",
-      "Milestone 4 - unified trainable paper-reference model"
+      "Milestone 4 - unified trainable paper-reference model",
+      "Milestone 5 - canonical data lake and audits"
     ]
   },
   "unresolved_decisions": [
@@ -71,7 +73,10 @@
     "What target and calibration data define the confidence head?",
     "What is the exact per-module width/depth split behind 185M parameters?",
     "What quantization schedule and target mobile runtime produced the reported latency?",
-    "What are the exact ScreenSpot subset definitions for small and dense screens?"
+    "What are the exact ScreenSpot subset definitions for small and dense screens?",
+    "Which license governs GUIAct/GUIEnv while the official Hub cards and GUICourse repository advertise different identifiers?",
+    "What reviewed cross-source application alias map should be frozen for the full public corpus, especially where a source exposes only domain or task identity?",
+    "Which licensed RICO screenshot/package metadata release should be joined to RICO Semantics for production icon-taxonomy and app-disjoint use?"
   ],
   "versions": {
     "config_schema": 1,

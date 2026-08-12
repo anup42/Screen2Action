@@ -5,8 +5,8 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: Milestone 5 - canonical data lake and audits
-- Git branch/commit: `main` / `aaeb0ea698713f4aa1096abe35faf72e96a9dfd0`
+- Active milestone: Milestone 6 - resumable perception precompute
+- Git branch/commit: `main` / `93f55d615e84be7f8a04f42fe85e36c8a33331ae`
 - Source dirty at snapshot: `false`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
@@ -21,6 +21,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - Milestone 2 - model registry and reproducible assets
 - Milestone 3 - production perception and taxonomy
 - Milestone 4 - unified trainable paper-reference model
+- Milestone 5 - canonical data lake and audits
 
 ## Exact continuation commands
 
@@ -34,6 +35,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - `python -m pytest tests/unit/test_handoff.py -q`
 - `python -m screen2action.tools.verify all`
 - `screen2action doctor --device cpu --json`
+- `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
@@ -61,6 +63,9 @@ architecture/runbook documents listed in `AGENTS.md`.
 - What is the exact per-module width/depth split behind 185M parameters?
 - What quantization schedule and target mobile runtime produced the reported latency?
 - What are the exact ScreenSpot subset definitions for small and dense screens?
+- Which license governs GUIAct/GUIEnv while the official Hub cards and GUICourse repository advertise different identifiers?
+- What reviewed cross-source application alias map should be frozen for the full public corpus, especially where a source exposes only domain or task identity?
+- Which licensed RICO screenshot/package metadata release should be joined to RICO Semantics for production icon-taxonomy and app-disjoint use?
 
 ## Machine-readable state
 
