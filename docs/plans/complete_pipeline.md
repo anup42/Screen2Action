@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 1 - typed configuration, CLI, and diagnostics
+**Active milestone:** Milestone 2 - model registry and reproducible assets
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -76,19 +76,19 @@ measurement under the stated protocol.
 - [x] Focused tests and full offline verification pass.
 - [x] Prepare a Git checkpoint containing only repository source/config/docs.
 
-### Milestone 1 - typed configuration, CLI, and environment diagnostics (IN PROGRESS)
+### Milestone 1 - typed configuration, CLI, and environment diagnostics (COMPLETE)
 
-- [ ] Stable schema-versioned YAML composition with environment expansion,
+- [x] Stable schema-versioned YAML composition with environment expansion,
       repeatable dotted overrides, validation, and resolved snapshots.
-- [ ] One `screen2action` CLI and matching `python -m screen2action` entrypoint
+- [x] One `screen2action` CLI and matching `python -m screen2action` entrypoint
       exposing every required command group.
-- [ ] `doctor --device cpu|cuda --json` reports environment, roots, optional
+- [x] `doctor --device cpu|cuda --json` reports environment, roots, optional
       features, assets/manifests/caches/checkpoints, warnings, and next command.
-- [ ] Package extras do not force a CUDA PyTorch wheel.
-- [ ] Idempotent CPU/GPU bootstrap and smoke shell scripts.
-- [ ] CLI/config/doctor tests and full offline verification pass.
+- [x] Package extras do not force a CUDA-specific PyTorch wheel.
+- [x] Idempotent CPU/GPU bootstrap and smoke shell scripts.
+- [x] CLI/config/doctor tests and full offline verification pass.
 
-### Milestone 2 - model registry and reproducible assets
+### Milestone 2 - model registry and reproducible assets (IN PROGRESS)
 
 - [ ] Registry covers ScreenParser, docTR CRNN, MobileNetV3-small, compact
       BERT, and MobileViT-S with licenses and I/O contracts.
@@ -190,6 +190,13 @@ measurement under the stated protocol.
 - **2026-08-12:** Milestone 0 focused handoff tests passed (2 tests); the full
   verifier passed with 43 tests. GitHub connector access confirmed admin/push
   permission to the user-supplied private repository. Milestone 1 is active.
+- **2026-08-12:** Milestone 0 was pushed to `anup42/Screen2Action`; local and
+  remote `main` matched at `e98440e59f1e2bc2a6554b198ff453ed1e272b5a`.
+- **2026-08-12:** Added schema-versioned YAML composition/overrides/snapshots,
+  all required CLI paths and help, a secret-safe CPU/CUDA doctor, feature
+  extras, bootstrap/smoke scripts, and a CPU training/checkpoint/resume smoke.
+  Milestone 1 focused tests (8) and the full suite (51) passed. Milestone 2 is
+  active.
 
 ## Discoveries and surprises
 
@@ -218,6 +225,9 @@ measurement under the stated protocol.
   `anup42/Screen2Action` repository. Because the remote is empty, establish
   `main` directly; no pull request has a meaningful base for the initial
   checkpoint. Exclude all local presentation/output directories.
+- **D-005 (configuration):** Keep YAML as the only core runtime dependency.
+  All heavy model/data/training/export imports remain lazy and feature-gated;
+  no package metadata selects a CUDA wheel.
 
 ## Validation ledger
 
@@ -227,6 +237,22 @@ measurement under the stated protocol.
   2 focused tests passed.
 - **2026-08-12:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
   Mypy, format/compile checks, and 43 offline tests passed in 13.2 seconds.
+- **2026-08-12:** `python -m pytest tests/unit/test_config.py
+  tests/unit/test_cli.py tests/unit/test_doctor.py
+  tests/unit/test_training_smoke.py -q` - exit 0; 8 focused tests passed.
+- **2026-08-12:** `screen2action doctor --device cpu --json` - exit 0; CPU
+  PyTorch, root writability, RAM/disk, optional features, and unresolved model
+  lock reported without absolute configured paths or credential values.
+- **2026-08-12:** `screen2action config validate --config
+  configs/model/tiny_cpu.yaml --set retrieval_top_k=5 --json` - exit 0;
+  schema 1 validated with deterministic digest.
+- **2026-08-12:** `screen2action train smoke --device cpu --steps 2 --json` -
+  exit 0; finite forward/backward loss and exact checkpoint/resume parity.
+- **2026-08-12:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
+  Mypy, format/compile checks, and 51 offline tests passed in 9.5 seconds.
+- **2026-08-12:** `python -m screen2action.tools.verify all` after final doctor
+  package-version reporting - exit 0; 51 tests and all static checks passed in
+  9.9 seconds.
 
 ## Remaining blockers and continuation
 

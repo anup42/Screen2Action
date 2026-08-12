@@ -9,19 +9,48 @@ description = "CPU-first structured semantic bottleneck for GUI grounding"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{name = "Screen2Action contributors"}]
-dependencies = []
+dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
 cpu = ["torch>=2.2"]
+perception = [
+  "huggingface-hub>=0.23",
+  "python-doctr[torch]>=0.10",
+  "timm>=1.0",
+  "torchvision>=0.17",
+  "transformers>=4.40",
+  "ultralytics>=8.3",
+]
+data = [
+  "datasets>=2.18",
+  "numpy>=1.26",
+  "Pillow>=10.0",
+  "pyarrow>=15.0",
+  "webdataset>=0.2.86",
+]
+train = ["tensorboard>=2.16"]
+android-control = ["tensorflow>=2.16"]
 dev = [
   "mypy>=1.10",
   "pytest>=8.0",
   "ruff>=0.6",
-  "PyYAML>=6.0",
+  "types-PyYAML>=6.0",
 ]
 export = [
   "onnx>=1.15",
   "onnxruntime>=1.16",
+]
+all-no-torch = [
+  "datasets>=2.18",
+  "huggingface-hub>=0.23",
+  "numpy>=1.26",
+  "onnx>=1.15",
+  "onnxruntime>=1.16",
+  "Pillow>=10.0",
+  "pyarrow>=15.0",
+  "tensorboard>=2.16",
+  "transformers>=4.40",
+  "webdataset>=0.2.86",
 ]
 
 [project.scripts]

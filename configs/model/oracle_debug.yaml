@@ -1,3 +1,4 @@
+schema_version: 1
 name: oracle_debug
 device: cpu
 d: 64

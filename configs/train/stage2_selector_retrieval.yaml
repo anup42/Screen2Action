@@ -1,3 +1,4 @@
+schema_version: 1
 name: stage2_selector_retrieval
 epochs: 8
 global_batch_size: 256

@@ -22,6 +22,19 @@ python -m screen2action.tools.verify all
 python -m screen2action handoff snapshot
 ```
 
+The installed console and module entry points are identical. Discover the
+workflow with `screen2action --help`; useful first checks are:
+
+```text
+screen2action doctor --device cpu --json
+screen2action config validate --config configs/model/tiny_cpu.yaml --json
+screen2action train smoke --device cpu --json
+```
+
+Configuration supports recursive `extends`, `${ENV_VAR}` or
+`${ENV_VAR:-default}` expansion, repeatable `--set dotted.key=value`
+overrides, schema validation, and resolved snapshots in run directories.
+
 The `export` extra supplies ONNX and ONNXRuntime for the CPU numerical parity
 test; the core runtime itself does not require either package.
 

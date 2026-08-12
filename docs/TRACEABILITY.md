@@ -31,7 +31,7 @@ no qualifying implementation evidence exists.
 | S2A-020 | PTQ/QAT utility interfaces | partial | not-started | not-started | not-started |
 | S2A-021 | structured runtime logging/toy duplicate diagnostics | complete | partial | partial | partial |
 | S2A-022 | resumable handoff/provenance/runbooks | complete | partial | partial | partial |
-| S2A-023 | unified CLI/config/doctor | not-started | not-started | not-started | not-started |
+| S2A-023 | unified CLI/config/doctor | complete | partial | partial | partial |
 | S2A-024 | model registry/lock/fetch/verify | partial | not-started | not-started | not-started |
 | S2A-025 | public production perception/taxonomy/cache | not-started | not-started | not-started | not-started |
 | S2A-026 | unified paper-reference trainable model | not-started | not-started | not-started | not-started |

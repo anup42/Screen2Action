@@ -152,3 +152,13 @@ integration, paper-reference training, and deployment/export. Tiny-model
 shape/parity or fixture success may complete the first dimension while the
 other dimensions remain partial or not started. This prevents interface tests
 from becoming production or reproduction claims.
+
+## ADR-0016: YAML as the sole core configuration dependency
+
+**Status:** accepted.
+
+PyYAML is the only core runtime dependency because configuration files are an
+existing public repository contract and every operational command must compose,
+expand, validate, and snapshot them consistently. PyTorch and all model/data,
+training, AndroidControl, and export packages remain feature extras with lazy
+imports. CUDA PyTorch is installed separately using the official selector.
