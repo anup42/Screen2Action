@@ -150,7 +150,7 @@ measurement under the stated protocol.
 - [x] Stage-2 cached loader does not instantiate ScreenParser/docTR.
 - [x] Resume/atomicity/command-independence tests.
 
-### Milestone 7 - GPU/DDP stage training
+### Milestone 7 - GPU/DDP stage training (COMPLETE)
 
 - [x] Torchrun local-rank setup, Gloo/NCCL selection, DDP, samplers, cleanup,
       no-sync accumulation, all-reduced metrics, deterministic seeds.
