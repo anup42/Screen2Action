@@ -229,7 +229,7 @@ def build_handoff_snapshot(
         "perception_cache_manifests": _discover_digest_files(
             cache_root,
             cache_label,
-            ("perception/**/manifest.json",),
+            ("perception/*/manifest.json",),
         ),
         "checkpoints": _checkpoint_inventory(run_root, run_label),
         "commands": {

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from argparse import Namespace
 
 import pytest
 
-from screen2action.cli import REQUIRED_COMMAND_PATHS, _parser, main
+from screen2action.cli import REQUIRED_COMMAND_PATHS, _parser, _precompute_shard, main
 
 
 def test_every_required_command_has_help() -> None:
@@ -57,3 +58,14 @@ def test_mobilevit_shape_probe_has_a_no_weight_dry_run(capsys: object) -> None:
     payload = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert payload["command"] == "models probe-mobilevit"
     assert payload["status"] == "dry_run"
+
+
+def test_precompute_uses_torchrun_rank_for_process_safe_sharding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("WORLD_SIZE", "4")
+    monkeypatch.setenv("RANK", "2")
+    assert _precompute_shard(Namespace(shard_count=None, shard_index=None)) == (2, 4)
+
+    with pytest.raises(ValueError, match="WORLD_SIZE"):
+        _precompute_shard(Namespace(shard_count=3, shard_index=None))

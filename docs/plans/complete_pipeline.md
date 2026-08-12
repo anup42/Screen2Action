@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 6 - resumable perception precompute
+**Active milestone:** Milestone 7 - GPU/DDP stage training
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -142,13 +142,13 @@ measurement under the stated protocol.
 - [x] CLI fixture workflow exercises register -> normalize -> validate -> split
       -> dedup -> manifest without copyrighted assets.
 
-### Milestone 6 - resumable perception precompute
+### Milestone 6 - resumable perception precompute (COMPLETE)
 
-- [ ] Unique-screen deterministic sharding, atomic writes, resume/retry,
+- [x] Unique-screen deterministic sharding, atomic writes, resume/retry,
       failure logs, compatibility digests, cache validation/stats.
-- [ ] CPU sample path and CUDA/multiprocess-ready path.
-- [ ] Stage-2 cached loader does not instantiate ScreenParser/docTR.
-- [ ] Resume/atomicity/command-independence tests.
+- [x] CPU sample path and CUDA/multiprocess-ready path.
+- [x] Stage-2 cached loader does not instantiate ScreenParser/docTR.
+- [x] Resume/atomicity/command-independence tests.
 
 ### Milestone 7 - GPU/DDP stage training
 
@@ -223,6 +223,12 @@ measurement under the stated protocol.
   manifests; and deterministic training shards. Eighteen focused offline tests
   pass. Full public downloads and source-quality audits remain external gates;
   Milestone 6 is active.
+- **2026-08-13:** Added manifest-bound unique-screen precomputation with stable
+  process/torchrun hash shards, atomic run progress, entry-level resume and
+  retries, stale-artifact recovery, raw and final perception evidence,
+  compatibility manifests, offline validation/stats, and a cache-only Stage 2
+  loader. Real locked models and CUDA remain opt-in external gates; Milestone 7
+  is active.
 
 ## Discoveries and surprises
 
@@ -269,6 +275,11 @@ measurement under the stated protocol.
   reject records lacking safe semantics/app identity, split before synthetic
   augmentation, and treat weak references and dedup thresholds as versioned
   public reconstructions. Fixture success is not full-corpus validation.
+- **D-010 (precompute coordination):** Use deterministic hash partitioning for
+  independent model-owning processes rather than DDP collectives. Bind every
+  cache to model/config/checkpoint/schema digests, reject command fields, and
+  require complete validated shards in Stage 2. Short directory prefixes are
+  collision-checked against full immutable digests for Windows portability.
 
 ## Validation ledger
 
@@ -324,6 +335,12 @@ measurement under the stated protocol.
   Python files formatted, Ruff and Mypy passed, and 105 offline tests passed
   with seven opt-in network/GPU tests deselected. Milestone 5 is fixture/offline
   complete; public-corpus execution remains unverified.
+- **2026-08-13:** focused Milestone 6 tests - exit 0; 13 cache/orchestration,
+  two-shard resume, transient retry, stale lock/temp recovery, raw-output,
+  cache-only loader, CLI rank-discovery, and corruption-detection tests passed.
+- **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 150
+  Python files formatted, Ruff and Mypy passed, and 110 offline tests passed
+  with eight opt-in network/GPU tests deselected.
 
 ## Remaining blockers and continuation
 

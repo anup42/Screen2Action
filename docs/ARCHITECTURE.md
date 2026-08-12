@@ -74,6 +74,18 @@ and any reconstructed containers carry auditable policy provenance. `oracle`,
 `real`, and `cached` modes share the same downstream node/edge schema and never
 accept command text.
 
+Production precomputation reads only unique content hashes from a verified
+data manifest. Stable hash partitioning maps each screen to one explicit shard;
+`torchrun` ranks discover `RANK`/`WORLD_SIZE` without creating a distributed
+model. Each rank owns its model process, while cache-entry and status writes
+use cross-process locks and atomic replacement. The bundle manifest binds the
+model lock, trained visual-head checkpoint (or an explicitly seeded smoke-only
+initialization), perception config, canonical schema, and cache schema. Entry
+payloads retain raw detector, OCR, icon/actionability outputs and final nodes,
+but explicitly reject command-conditioned state. The stage-two cache loader
+imports neither ScreenParser nor docTR and refuses incomplete or incompatible
+runs.
+
 ## Export boundary
 
 Host code retains image decoding, detector/OCR postprocessing, graph

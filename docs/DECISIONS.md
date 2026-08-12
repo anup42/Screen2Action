@@ -258,3 +258,31 @@ Because the paper does not disclose reference annotation,
 then high-confidence relation phrases. It writes confidence, method, and masks;
 uncertain labels have no reference loss. These are public reconstruction
 choices, not paper-specified preprocessing.
+
+## ADR-0021: Manifest-bound perception precomputation
+
+**Status:** accepted for production integration.
+
+Perception work is partitioned by the first 64 bits of the canonical screenshot
+SHA256 modulo worker count. `torchrun` ranks or explicitly launched processes
+therefore require no coordination collective: each process owns a model and a
+disjoint deterministic shard, while short-lived file locks protect shared
+atomic cache writes. Full SHA256 identities remain inside manifests and cache
+keys. Directory names use verified 80-bit prefixes to remain below legacy
+Windows path limits; opening a colliding prefix fails the immutable full-digest
+manifest check.
+
+Each bundle binds the exact model-lock digest, perception-config digest,
+canonical/cache schema versions, and trained visual-head checkpoint digest.
+Custom icon/actionability heads are required by default. A deterministic seeded
+untrained-head mode is allowed only for plumbing smoke tests and is labeled in
+CLI output and cache identity. Raw detector, OCR, icon/actionability, optional
+detector ROI evidence, and final canonical graph state are cached; command
+inputs/results are forbidden.
+
+Entry writes, run progress, and final shard status use atomic replacement.
+Completed shards validate every entry digest before resuming. Failed screens
+carry bounded error text and monotonically increasing attempts; abandoned
+short-lived locks and old atomic-write temporaries have scoped cache-only
+recovery. Stage 2 loads completed cache entries through a module that does not
+import or instantiate ScreenParser or docTR.

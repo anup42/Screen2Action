@@ -8,11 +8,13 @@ from pathlib import Path
 import pytest
 import torch
 
+from screen2action.config import load_config
 from screen2action.data.schema import NodeType
 from screen2action.model_assets import load_model_lock, verify_locked_models
 from screen2action.models.mobilevit import MobileVitSCropEncoder
 from screen2action.perception.base import PreprocessingMetadata, UiDetection, normalize_image
 from screen2action.perception.doctr_crnn import DoctrCrnnBackend, DoctrCrnnVgg16Recognizer
+from screen2action.perception.factory import build_locked_perception_service
 from screen2action.perception.icon_actionability import MobileNetV3IconActionability
 from screen2action.perception.screenparser import (
     ScreenParserConfig,
@@ -93,6 +95,30 @@ def _run_real_smoke(device: str) -> None:
 
 def test_real_locked_perception_models_on_cpu() -> None:
     _run_real_smoke("cpu")
+
+
+def test_real_locked_full_screen_perception_and_cache_on_cpu(tmp_path: Path) -> None:
+    cache_value = os.environ.get("SCREEN2ACTION_CACHE_ROOT")
+    lock_path = Path(os.environ.get("SCREEN2ACTION_MODEL_LOCK", "configs/models/lock.json"))
+    if cache_value is None or not lock_path.is_file():
+        pytest.skip("set SCREEN2ACTION_CACHE_ROOT and provide a completed model lock")
+    config = load_config(Path("configs/perception/public_precompute.yaml"))
+    factory = build_locked_perception_service(
+        model_lock=lock_path,
+        model_cache_root=Path(cache_value),
+        cache_root=tmp_path,
+        config_values=config.values,
+        requested_device="cpu",
+        visual_checkpoint=None,
+        allow_untrained_heads=True,
+    )
+    pixels = torch.zeros((3, 96, 192), dtype=torch.uint8)
+    pixels[:, 20:60, 20:170] = 180
+
+    frame = factory.service.perceive((pixels,), mode="real")[0]
+
+    assert frame.raw_outputs["command_conditioned"] is False
+    assert factory.cache.stats()["entries"] == 1
 
 
 @pytest.mark.gpu

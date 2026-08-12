@@ -10,7 +10,7 @@ import uuid
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from screen2action import PERCEPTION_CACHE_SCHEMA_VERSION
@@ -62,14 +62,26 @@ class CacheWriteResult:
 class ContentAddressedPerceptionCache:
     """JSON cache with atomic writes, sharding, worker locks, and failure logs."""
 
-    def __init__(self, root: str | Path, *, lock_timeout_seconds: float = 10.0) -> None:
-        if lock_timeout_seconds <= 0.0:
-            raise ValueError("lock_timeout_seconds must be positive")
+    def __init__(
+        self,
+        root: str | Path,
+        *,
+        lock_timeout_seconds: float = 10.0,
+        stale_lock_seconds: float = 60.0,
+    ) -> None:
+        if lock_timeout_seconds <= 0.0 or stale_lock_seconds <= 0.0:
+            raise ValueError("lock and stale-lock timeouts must be positive")
         self.root = Path(root)
         self.lock_timeout_seconds = lock_timeout_seconds
+        self.stale_lock_seconds = stale_lock_seconds
 
     def _entry_path(self, digest: str) -> Path:
         return self.root / "entries" / digest[:2] / digest[2:4] / f"{digest}.json"
+
+    def entry_path(self, key: PerceptionCacheKey) -> Path:
+        """Return the deterministic entry path without reading or writing it."""
+
+        return self._entry_path(key.digest)
 
     def _failure_path(self, digest: str) -> Path:
         return self.root / "failures" / digest[:2] / f"{digest}.json"
@@ -95,6 +107,16 @@ class ContentAddressedPerceptionCache:
                 # another process still owns the O_EXCL lock file.
                 if isinstance(error, PermissionError) and os.name != "nt":
                     raise
+                try:
+                    stale = time.time() - lock.stat().st_mtime >= self.stale_lock_seconds
+                except FileNotFoundError:
+                    continue
+                if stale:
+                    try:
+                        lock.unlink()
+                    except FileNotFoundError:
+                        pass
+                    continue
                 if time.monotonic() - started >= self.lock_timeout_seconds:
                     raise TimeoutError(
                         f"timed out waiting for perception cache key {digest}"
@@ -119,6 +141,51 @@ class ContentAddressedPerceptionCache:
             encoding="utf-8",
         )
         temporary.replace(destination)
+
+    def _control_path(self, relative_path: str) -> Path:
+        normalized = PurePosixPath(relative_path.replace("\\", "/"))
+        if (
+            normalized.is_absolute()
+            or ".." in normalized.parts
+            or not normalized.parts
+            or normalized.suffix != ".json"
+        ):
+            raise ValueError("cache control path must be a safe relative JSON path")
+        destination = (self.root / Path(*normalized.parts)).resolve()
+        if not destination.is_relative_to(self.root.resolve()):
+            raise ValueError("cache control path escapes cache root")
+        return destination
+
+    def read_control(self, relative_path: str) -> dict[str, Any] | None:
+        """Read one cache manifest/status document from a safe relative path."""
+
+        path = self._control_path(relative_path)
+        if not path.is_file():
+            return None
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError(f"cache control document is malformed: {relative_path}")
+        return payload
+
+    def write_control(
+        self,
+        relative_path: str,
+        payload: Mapping[str, Any],
+        *,
+        immutable: bool = False,
+    ) -> Path:
+        """Atomically write a cross-process-safe bundle, run, or shard document."""
+
+        destination = self._control_path(relative_path)
+        lock_digest = hashlib.sha256(f"control:{relative_path}".encode()).hexdigest()
+        with self._exclusive(lock_digest):
+            existing = self.read_control(relative_path)
+            if immutable and existing is not None:
+                if existing != dict(payload):
+                    raise ValueError(f"immutable cache control document differs: {relative_path}")
+                return destination
+            self._write_json_atomic(destination, payload)
+        return destination
 
     def get(self, key: PerceptionCacheKey) -> dict[str, Any] | None:
         """Return a compatible payload, or `None` for a cache miss."""
@@ -205,3 +272,23 @@ class ContentAddressedPerceptionCache:
         temporary = sum(1 for _ in self.root.glob("**/*.tmp"))
         locks = sum(1 for _ in (self.root / "locks").glob("**/*.lock"))
         return {"entries": entries, "failures": failures, "temporary": temporary, "locks": locks}
+
+    def cleanup_stale_temporary(self, *, older_than_seconds: float = 60.0) -> int:
+        """Remove only abandoned atomic-write temporaries below this cache root."""
+
+        if older_than_seconds <= 0.0:
+            raise ValueError("temporary-file age must be positive")
+        removed = 0
+        now = time.time()
+        for path in self.root.glob("**/*.tmp"):
+            try:
+                if now - path.stat().st_mtime < older_than_seconds:
+                    continue
+                resolved = path.resolve()
+                if not resolved.is_relative_to(self.root.resolve()):
+                    raise ValueError("temporary cache path escapes cache root")
+                path.unlink()
+                removed += 1
+            except FileNotFoundError:
+                continue
+        return removed

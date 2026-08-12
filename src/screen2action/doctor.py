@@ -256,7 +256,7 @@ def _external_state(data_root: Path, cache_root: Path, run_root: Path) -> dict[s
         list(data_root.glob("normalized/*/manifests/*.json")) if data_root.exists() else []
     )
     cache_manifests = (
-        list(cache_root.glob("perception/**/manifest.json")) if cache_root.exists() else []
+        list(cache_root.glob("perception/*/manifest.json")) if cache_root.exists() else []
     )
     checkpoints = list(run_root.glob("**/*.pt")) if run_root.exists() else []
     return {

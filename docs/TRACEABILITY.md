@@ -36,7 +36,7 @@ no qualifying implementation evidence exists.
 | S2A-025 | public production perception/taxonomy/cache: typed adapters, fake-backed integration tests | complete | partial | partial | host-only |
 | S2A-026 | unified trainable model, batched masks, paper graph/reranker, retention, BERT/MobileViT adapters, typed heads | complete | partial | partial | partial |
 | S2A-027 | immutable source acquisition, seven adapters, app split, scalable dedup, weak references, manifest enforcement, deterministic shards | complete | partial | partial | n/a |
-| S2A-028 | resumable production perception precompute | not-started | not-started | not-started | n/a |
+| S2A-028 | unique-screen hash sharding, atomic resume/retry, raw/final cache evidence, validation/stats, cache-only Stage-2 loader | complete | partial | partial | host-only |
 | S2A-029 | complete torchrun/DDP stage system | not-started | partial | not-started | n/a |
 | S2A-030 | production evaluation/calibration/reporting | not-started | not-started | not-started | n/a |
 | S2A-031 | four-partition paper-reference export/runtime | not-started | not-started | not-started | not-started |

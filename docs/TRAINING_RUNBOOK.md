@@ -23,3 +23,30 @@ Before a long run, use `train probe-batch`, then `train smoke`. Resume must
 restore model, optimizer, scheduler, scaler, RNG, sampler epoch/state, step,
 best metric, config/model/data/cache digests, and Git revision. A digest
 mismatch is an error unless an explicit, logged override permits it.
+
+## Perception cache prerequisite
+
+After Stage 1 semantics/graph training, precompute command-independent frame
+state from the exact checkpoint that supplies the MobileNet custom heads:
+
+```powershell
+screen2action perception precompute `
+  --manifest "$env:SCREEN2ACTION_DATA_ROOT\normalized\public-v1\manifests\training.json" `
+  --model-lock configs/models/lock.json `
+  --visual-checkpoint "$env:SCREEN2ACTION_RUN_ROOT\stage1_semantics_graph\best.pt" `
+  --device cpu --max-screens 8 --batch-size 2 --json
+```
+
+`--max-screens` is a deterministic CPU smoke boundary. Omitting it processes
+the full manifest. `--allow-untrained-heads` exists only for an explicitly
+labeled, seeded plumbing smoke and is rejected by default; its cache is not a
+trained Stage 2 input. Use the returned `cache_manifest_path` to run:
+
+```powershell
+screen2action perception validate <cache-manifest> --json
+screen2action perception stats <cache-manifest> --json
+```
+
+Stage 2 must open the cache through `CachedPerceptionLoader`, provide the
+expected model-lock/config/data-manifest digests, and refuse incomplete shard
+runs. Training workers do not instantiate ScreenParser or CRNN.

@@ -92,6 +92,10 @@ def test_real_perception_deduplicates_batches_and_reuses_cache(tmp_path: Path) -
     assert len(by_type[NodeType.CONTROL].roi_visual_feature) == 256
     assert by_type[NodeType.CONTROL].visual_feature_confidence == 1.0
     assert by_type[NodeType.TEXT].parent_id == by_type[NodeType.CONTROL].node_id
+    assert first[0].raw_outputs["command_conditioned"] is False
+    assert len(first[0].raw_outputs["detector"]["items"]) == 3  # type: ignore[index]
+    assert len(first[0].raw_outputs["ocr"]["items"]) == 1  # type: ignore[index]
+    assert len(first[0].raw_outputs["icon_actionability"]["items"]) == 2  # type: ignore[index]
     assert cache.stats()["entries"] == 1
 
     second = service.perceive((image,), mode="real")

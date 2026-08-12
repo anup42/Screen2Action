@@ -1,0 +1,25 @@
+schema_version: 1
+name: public_perception_precompute_v1
+detector:
+  input_size: 1280
+  confidence_threshold: 0.10
+  nms_iou_threshold: 0.10
+  container_augmentation:
+    enabled: false
+    minimum_children: 3
+    alignment_tolerance: 0.025
+    margin: 0.01
+    confidence: 0.65
+perception:
+  node_crop_size: 224
+  node_crop_margin: 0.0
+  include_proximity: true
+  include_ordinal: true
+  ocr_control_propagation_coverage: 0.95
+  ocr_aspect_batch_size: 64
+  include_detector_roi_features: false
+  untrained_head_seed: 17
+notes:
+  truth_status: public_reconstruction
+  command_conditioned: false
+  detector_roi_features: optional_and_disabled_by_default

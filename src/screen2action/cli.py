@@ -41,6 +41,8 @@ REQUIRED_COMMAND_PATHS = (
     "taxonomy icons build",
     "taxonomy icons freeze",
     "perception precompute",
+    "perception validate",
+    "perception stats",
     "train smoke",
     "train probe-batch",
     "train run",
@@ -312,11 +314,36 @@ def _parser() -> argparse.ArgumentParser:
     precompute.add_argument("--model-lock", type=Path, default=Path("configs/models/lock.json"))
     precompute.add_argument("--cache-root", type=Path)
     precompute.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
-    precompute.add_argument("--shard-index", type=int, default=0)
-    precompute.add_argument("--shard-count", type=int, default=1)
-    _add_config(precompute)
+    precompute.add_argument("--shard-index", type=int)
+    precompute.add_argument("--shard-count", type=int)
+    precompute.add_argument("--batch-size", type=int, default=4)
+    precompute.add_argument("--max-retries", type=int, default=3)
+    precompute.add_argument("--max-screens", type=int)
+    precompute.add_argument("--visual-checkpoint", type=Path)
+    precompute.add_argument(
+        "--allow-untrained-heads",
+        action="store_true",
+        help="allow deterministic random custom heads for smoke testing only",
+    )
+    _add_config(precompute, default="configs/perception/public_precompute.yaml")
     _add_dry_run(precompute)
     _add_json(precompute)
+    perception_validate = _leaf(
+        perception_commands,
+        "validate",
+        "validate cache manifests, shard status, and entries offline",
+        "perception validate",
+    )
+    perception_validate.add_argument("manifest", type=Path)
+    _add_json(perception_validate)
+    perception_stats = _leaf(
+        perception_commands,
+        "stats",
+        "report bounded cache/run/failure counts",
+        "perception stats",
+    )
+    perception_stats.add_argument("manifest", type=Path)
+    _add_json(perception_stats)
 
     train = groups.add_parser("train", help="probe, smoke-test, and run staged training")
     train_commands = train.add_subparsers(dest="train_command", required=True)
@@ -434,6 +461,22 @@ def _load_yaml_mapping(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"top-level YAML must be a mapping: {path}")
     return value
+
+
+def _precompute_shard(args: argparse.Namespace) -> tuple[int, int]:
+    """Resolve explicit sharding or torchrun RANK/WORLD_SIZE without ambiguity."""
+
+    environment_count = int(os.environ.get("WORLD_SIZE", "1"))
+    environment_index = int(os.environ.get("RANK", "0"))
+    count = args.shard_count if args.shard_count is not None else environment_count
+    index = args.shard_index if args.shard_index is not None else environment_index
+    if environment_count > 1 and args.shard_count is not None and count != environment_count:
+        raise ValueError("--shard-count must equal torchrun WORLD_SIZE")
+    if environment_count > 1 and args.shard_index is not None and index != environment_index:
+        raise ValueError("--shard-index must equal torchrun RANK")
+    if count <= 0 or not 0 <= index < count:
+        raise ValueError("perception shard index must be in [0, shard_count)")
+    return index, count
 
 
 def _run_read_only(args: argparse.Namespace) -> dict[str, Any] | None:
@@ -571,6 +614,52 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
             cache_root,
             registry_path=args.registry,
         )
+    if args.command_path == "perception validate":
+        from screen2action.perception.precompute import validate_perception_cache
+
+        return dataclasses.asdict(validate_perception_cache(args.manifest))
+    if args.command_path == "perception stats":
+        from screen2action.perception.precompute import perception_cache_stats
+
+        return perception_cache_stats(args.manifest)
+    if args.command_path == "perception precompute" and not args.dry_run:
+        from screen2action.model_assets import configured_model_cache_root
+        from screen2action.perception.factory import build_locked_perception_service
+        from screen2action.perception.precompute import precompute_perception
+
+        config = load_config(args.config, overrides=args.overrides)
+        cache_root = configured_model_cache_root(root, args.cache_root)
+        factory = build_locked_perception_service(
+            model_lock=args.model_lock,
+            model_cache_root=cache_root,
+            cache_root=cache_root,
+            config_values=config.values,
+            requested_device=args.device,
+            visual_checkpoint=args.visual_checkpoint,
+            allow_untrained_heads=args.allow_untrained_heads,
+        )
+        factory.cache.write_control(
+            "resolved-config.json",
+            cast(Mapping[str, Any], config.snapshot()),
+            immutable=True,
+        )
+        shard_index, shard_count = _precompute_shard(args)
+        precompute_result = precompute_perception(
+            args.manifest,
+            service=factory.service,
+            cache=factory.cache,
+            shard_index=shard_index,
+            shard_count=shard_count,
+            batch_size=args.batch_size,
+            max_retries=args.max_retries,
+            max_screens=args.max_screens,
+        )
+        return {
+            **dataclasses.asdict(precompute_result),
+            "device": factory.device,
+            "visual_checkpoint_status": factory.visual_checkpoint_status,
+            "resolved_config_sha256": config.sha256,
+        }
     if args.command_path == "data download" and not args.dry_run:
         from screen2action.data.assets import download_registered_source
         from screen2action.data.layout import DataLayout
@@ -831,7 +920,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         payload = _run_command(args)
         _emit(payload, as_json=bool(args.json))
-        if args.command_path in {"doctor", "models verify"} and not payload["ok"]:
+        if (
+            args.command_path in {"doctor", "models verify", "perception validate"}
+            and not payload["ok"]
+        ):
             return 1
         return 0
     except (FileNotFoundError, OSError, PermissionError, RuntimeError, ValueError) as error:

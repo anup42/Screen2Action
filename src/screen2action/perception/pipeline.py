@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any, cast
 
 import torch
@@ -49,6 +49,9 @@ class FullScreenPerceptionConfig:
     include_proximity: bool = True
     include_ordinal: bool = True
     ocr_control_propagation_coverage: float = 0.95
+    include_detector_roi_features: bool = False
+    visual_checkpoint_sha256: str = "0" * 64
+    untrained_head_seed: int = 0
 
     def __post_init__(self) -> None:
         if self.schema_version <= 0 or self.node_crop_size <= 0:
@@ -57,6 +60,12 @@ class FullScreenPerceptionConfig:
             raise ValueError("node_crop_margin must be in [0, 1]")
         if not 0.0 < self.ocr_control_propagation_coverage <= 1.0:
             raise ValueError("OCR propagation coverage must be in (0, 1]")
+        if len(self.visual_checkpoint_sha256) != 64 or any(
+            character not in "0123456789abcdef" for character in self.visual_checkpoint_sha256
+        ):
+            raise ValueError("visual checkpoint digest must be lowercase SHA256")
+        if self.untrained_head_seed < 0:
+            raise ValueError("untrained head seed cannot be negative")
 
     @property
     def digest(self) -> str:
@@ -78,6 +87,7 @@ class PerceptionFrame:
     diagnostics: Mapping[str, object]
     ocr_associations: tuple[OcrAssociationEvent, ...] = ()
     cache_key_digest: str | None = None
+    raw_outputs: Mapping[str, object] = field(default_factory=dict)
 
 
 def _node_to_dict(node: NodeRecord) -> dict[str, object]:
@@ -130,6 +140,7 @@ def perception_frame_to_payload(frame: PerceptionFrame) -> dict[str, object]:
         "source_mode": frame.mode,
         "diagnostics": dict(frame.diagnostics),
         "ocr_associations": [asdict(event) for event in frame.ocr_associations],
+        "raw_outputs": dict(frame.raw_outputs),
     }
 
 
@@ -245,9 +256,14 @@ def perception_frame_from_payload(
     edges = payload.get("edges")
     associations = payload.get("ocr_associations", [])
     diagnostics = payload.get("diagnostics", {})
+    raw_outputs = payload.get("raw_outputs", {})
     if not isinstance(nodes, list) or not isinstance(edges, list):
         raise ValueError("cached perception nodes/edges must be lists")
-    if not isinstance(associations, list) or not isinstance(diagnostics, dict):
+    if (
+        not isinstance(associations, list)
+        or not isinstance(diagnostics, dict)
+        or not isinstance(raw_outputs, dict)
+    ):
         raise ValueError("cached perception diagnostics are malformed")
     events = []
     for raw in associations:
@@ -276,6 +292,7 @@ def perception_frame_from_payload(
         diagnostics=cast(dict[str, object], diagnostics),
         ocr_associations=tuple(events),
         cache_key_digest=cache_key_digest,
+        raw_outputs=cast(dict[str, object], raw_outputs),
     )
 
 
@@ -325,12 +342,17 @@ class FullScreenPerception:
         self.model_bundle_lock_digest = model_bundle_lock_digest
         self.config = config or FullScreenPerceptionConfig()
 
-    def _key(self, image: ImageFrame) -> PerceptionCacheKey:
+    def key_for(self, image: ImageFrame) -> PerceptionCacheKey:
+        """Return the command-independent compatibility key for one normalized image."""
+
         return PerceptionCacheKey(
             screenshot_sha256=image.sha256,
             model_bundle_lock_digest=self.model_bundle_lock_digest,
             perception_config_digest=self.config.digest,
         )
+
+    def _key(self, image: ImageFrame) -> PerceptionCacheKey:
+        return self.key_for(image)
 
     def _graph(
         self,
@@ -374,12 +396,12 @@ class FullScreenPerception:
         self,
         image: ImageFrame,
         nodes: Sequence[NodeRecord],
-    ) -> tuple[NodeRecord, ...]:
+    ) -> tuple[tuple[NodeRecord, ...], dict[str, object]]:
         if self.visual_model is None:
-            return tuple(nodes)
+            return tuple(nodes), {"items": [], "model": "disabled"}
         candidates = [node for node in nodes if node.node_type is not NodeType.ROOT]
         if not candidates:
-            return tuple(nodes)
+            return tuple(nodes), {"items": [], "model": "mobilenet_v3_shared_v1"}
         crops, _ = batch_crop_tensor(
             image.pixels,
             [node.box_xyxy_norm for node in candidates],
@@ -390,9 +412,11 @@ class FullScreenPerception:
         device = parameter.device
         output: IconActionabilityOutput = self.visual_model(crops.to(device) / 255.0)
         probabilities = torch.softmax(output.icon_logits, dim=-1).detach().cpu()
+        icon_logits = output.icon_logits.detach().cpu()
         action_logits = output.actionability_logits.detach().cpu()
         features = output.visual_features.detach().cpu()
         updates: dict[int, NodeRecord] = {}
+        raw_items: list[dict[str, object]] = []
         for index, node in enumerate(candidates):
             icon = probabilities[index]
             updates[node.node_id] = replace(
@@ -408,7 +432,18 @@ class FullScreenPerception:
                 actionability_mask=(True, True, True, True),
                 provenance={**node.provenance, "visual_model": "mobilenet_v3_shared_v1"},
             )
-        return tuple(updates.get(node.node_id, node) for node in nodes)
+            raw_items.append(
+                {
+                    "node_id": node.node_id,
+                    "icon_logits": [float(value) for value in icon_logits[index]],
+                    "actionability_logits": [float(value) for value in action_logits[index]],
+                    "node_visual_feature": [float(value) for value in features[index]],
+                }
+            )
+        return tuple(updates.get(node.node_id, node) for node in nodes), {
+            "items": raw_items,
+            "model": "mobilenet_v3_shared_v1",
+        }
 
     def _real(self, images: Sequence[object]) -> tuple[PerceptionFrame, ...]:
         if self.detector is None or self.recognizer is None or self.visual_model is None:
@@ -443,8 +478,26 @@ class FullScreenPerception:
                     ocr,
                     propagation_coverage=self.config.ocr_control_propagation_coverage,
                 )
-                visual_nodes = self._attach_visual(detected.image, associated.nodes)
+                visual_nodes, raw_visual = self._attach_visual(detected.image, associated.nodes)
                 graph_nodes, edges, root_id = self._graph(visual_nodes)
+                raw_detections = []
+                for detection in detected.detections:
+                    raw_detection: dict[str, object] = {
+                        "node_id": detection.node_id,
+                        "original_class_id": detection.original_class_id,
+                        "original_class_name": detection.original_class_name,
+                        "confidence": detection.confidence,
+                        "box_xyxy_norm": list(detection.box_xyxy_norm),
+                        "semantic_roles": list(detection.semantic_roles),
+                        "annotation_source": detection.annotation_source,
+                        "policy_version": detection.policy_version,
+                        "preprocessing": asdict(detection.preprocessing),
+                    }
+                    if self.config.include_detector_roi_features:
+                        raw_detection["detector_roi_feature"] = list(
+                            detection.original_class_feature
+                        )
+                    raw_detections.append(raw_detection)
                 frame = PerceptionFrame(
                     screenshot_sha256=detected.image.sha256,
                     width=detected.image.width,
@@ -464,6 +517,19 @@ class FullScreenPerception:
                     },
                     ocr_associations=associated.events,
                     cache_key_digest=key.digest,
+                    raw_outputs={
+                        "detector": {
+                            "items": raw_detections,
+                            "raw_proposal_count": detected.raw_proposal_count,
+                            "post_nms_count": detected.post_nms_count,
+                            "raw_diagnostics_supported": detected.raw_diagnostics_supported,
+                        },
+                        "ocr": {
+                            "items": [asdict(result) for result in ocr],
+                        },
+                        "icon_actionability": raw_visual,
+                        "command_conditioned": False,
+                    },
                 )
                 if self.cache is not None:
                     self.cache.put(key, perception_frame_to_payload(frame))
@@ -506,6 +572,12 @@ class FullScreenPerception:
                     "source": "oracle_annotations",
                 },
                 cache_key_digest=key.digest,
+                raw_outputs={
+                    "detector": {"items": [], "source": "oracle_annotations"},
+                    "ocr": {"items": []},
+                    "icon_actionability": {"items": []},
+                    "command_conditioned": False,
+                },
             )
             if self.cache is not None:
                 self.cache.put(key, perception_frame_to_payload(frame))
