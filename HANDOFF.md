@@ -5,8 +5,8 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: Milestone 6 - resumable perception precompute
-- Git branch/commit: `main` / `93f55d615e84be7f8a04f42fe85e36c8a33331ae`
+- Active milestone: Milestone 7 - GPU/DDP stage training
+- Git branch/commit: `main` / `4444a684275749894bcce7ac80a42ed2333c7818`
 - Source dirty at snapshot: `false`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
@@ -22,6 +22,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - Milestone 3 - production perception and taxonomy
 - Milestone 4 - unified trainable paper-reference model
 - Milestone 5 - canonical data lake and audits
+- Milestone 6 - resumable perception precompute
 
 ## Exact continuation commands
 
@@ -35,6 +36,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 - `python -m pytest tests/unit/test_handoff.py -q`
 - `python -m screen2action.tools.verify all`
 - `screen2action doctor --device cpu --json`
+- `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
