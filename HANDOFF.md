@@ -5,8 +5,8 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: Milestone 1 - typed configuration, CLI, and diagnostics
-- Git branch/commit: `main` / `5fea3f376dd4fdf02b068c52be2b48397c9016b9`
+- Active milestone: Milestone 2 - model registry and reproducible assets
+- Git branch/commit: `main` / `e17929e08b573ea7375e896c939fc7365f8794ca`
 - Source dirty at snapshot: `false`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
@@ -17,6 +17,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 ## Completed milestones
 
 - Milestone 0 - repository truth and resumable handoff
+- Milestone 1 - typed configuration, CLI, and environment diagnostics
 
 ## Exact continuation commands
 
@@ -28,6 +29,8 @@ architecture/runbook documents listed in `AGENTS.md`.
 
 - `python -m screen2action.tools.verify all`
 - `python -m pytest tests/unit/test_handoff.py -q`
+- `python -m screen2action.tools.verify all`
+- `screen2action doctor --device cpu --json`
 - `python -m screen2action.tools.verify all`
 
 ## External state

@@ -5,16 +5,18 @@
     "last_successful": [
       "python -m screen2action.tools.verify all",
       "python -m pytest tests/unit/test_handoff.py -q",
+      "python -m screen2action.tools.verify all",
+      "screen2action doctor --device cpu --json",
       "python -m screen2action.tools.verify all"
     ],
     "refresh_handoff": "screen2action handoff snapshot",
     "resume": "screen2action train smoke --device cpu"
   },
   "data_manifests": [],
-  "generated_at_utc": "2026-08-12T17:33:44+00:00",
+  "generated_at_utc": "2026-08-12T17:46:05+00:00",
   "git": {
     "branch": "main",
-    "commit": "5fea3f376dd4fdf02b068c52be2b48397c9016b9",
+    "commit": "e17929e08b573ea7375e896c939fc7365f8794ca",
     "dirty": false,
     "dirty_entry_count": 0,
     "generated_files_excluded_from_dirty_check": [
@@ -34,7 +36,7 @@
     "os": "Windows",
     "os_release": "11",
     "python": "3.12.10",
-    "repository_volume_free_bytes": 32937869312
+    "repository_volume_free_bytes": 32945123328
   },
   "models": {
     "lock_path": "configs/models/lock.json",
@@ -45,10 +47,11 @@
   },
   "perception_cache_manifests": [],
   "plan": {
-    "active_milestone": "Milestone 1 - typed configuration, CLI, and diagnostics",
+    "active_milestone": "Milestone 2 - model registry and reproducible assets",
     "active_path": "docs/plans/complete_pipeline.md",
     "completed_milestones": [
-      "Milestone 0 - repository truth and resumable handoff"
+      "Milestone 0 - repository truth and resumable handoff",
+      "Milestone 1 - typed configuration, CLI, and environment diagnostics"
     ]
   },
   "unresolved_decisions": [
