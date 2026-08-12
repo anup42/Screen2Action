@@ -1,0 +1,23 @@
+# Open questions
+
+These questions prevent an exact reproduction claim. They are intentionally
+kept visible so later experiments do not silently turn defaults into facts.
+
+1. What detector input resolution, NMS threshold, and score threshold were
+   used?
+2. What exact UI node taxonomy and detector training labels were used?
+3. What are the 87 icon class names, class sources, and unknown-class policy?
+4. What tokenizer, vocabulary, special tokens, and vocabulary training corpus
+   were used?
+5. What exact SSB token grammar and per-field token costs were used?
+6. What components make up `phi(b_i, b_j)` and the relation features?
+7. How were reference nodes annotated for containment, proximity, and ordinal
+   commands?
+8. What target and calibration data define the confidence head?
+9. What is the exact per-module width/depth split behind 185M parameters?
+10. What quantization schedule and target mobile runtime produced the reported
+    latency?
+11. What are the exact ScreenSpot subset definitions for small and dense
+    screens?
+
+Until these are answered, reports must label results as reconstruction results.

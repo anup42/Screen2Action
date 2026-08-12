@@ -1,0 +1,154 @@
+# Architecture decisions
+
+## ADR-0001: normalized `xyxy` coordinates
+
+**Status:** accepted.
+
+The internal representation is `(x1, y1, x2, y2)` with each coordinate in
+`[0, 1]`. Pixel `(x, y, w, h)` forms are converted at dataset/runtime
+boundaries. This makes intersection, containment, and point tests unambiguous.
+
+## ADR-0002: deterministic reconstruction codec
+
+**Status:** accepted for the CPU milestone.
+
+The supplied paper specifies an SSB budget but not its grammar. The first codec
+uses a versioned integer-token grammar with a four-token graph header/footer,
+fixed 56-token node records before text, variable-length text IDs, and eight
+fixed five-token relation slots per node. Each relation slot stores relation
+type, direction, remapped destination, and one geometry bucket. Fixed slots
+make per-node costs independent of which optional references survive selection.
+This is a testable reconstruction, not the paper's hidden grammar.
+
+## ADR-0003: hierarchy and relation construction
+
+**Status:** accepted for the CPU milestone.
+
+Containment uses at least 80% child-area coverage and selects the smallest
+strictly larger qualifying parent. A full-screen synthetic root is inserted
+when needed. Proximity keeps at most one nearest neighbor in each cardinal
+direction. Row and column ordinal groups use interval-overlap components with
+an overlap ratio of at least 0.5 and stable geometric sorting.
+
+## ADR-0004: selector closure repair
+
+**Status:** accepted for the CPU milestone.
+
+BudgetSelect first solves an exact independent-item 0-1 dynamic program over
+fixed node costs after mandatory nodes. It then inserts parent and active
+relation-reference dependencies. If closure exceeds the budget, optional
+reference nodes are removed in ascending confidence order and their pointers
+are remapped to null. Mandatory nodes and mandatory ancestry are never removed;
+an unsatisfiable budget raises an explicit error.
+
+## ADR-0005: Stage 2 grounding stabilization
+
+**Status:** accepted for the CPU training workflow.
+
+The stage contract trains selector, retrieval, and grounding heads together
+while freezing the heavy crop encoder. A ground-truth positive is force
+inserted with probability 0.5 during the first two Stage 2 epochs and then the
+insertion rate is zero. The helper is deterministic at the schedule level and
+leaves the random sampling policy to the future data loader.
+
+## ADR-0006: CPU tokenizer and learned nulls
+
+**Status:** accepted for the CPU milestone.
+
+The default tokenizer is a deterministic Unicode case-folded vocabulary built
+only from training text. It is a replaceable boundary for the paper's
+unspecified tokenizer. Missing text, icon, and visual features use learned
+null vectors in `NodeEncoder`; zeros are not treated as observed features.
+
+## ADR-0007: relation attention geometry and export parity
+
+**Status:** accepted for the CPU milestone.
+
+Relation geometry is the 12-value vector emitted by `ssb.relations`: center
+offset, center distance, log size ratios, IoU, directional coverage, and four
+cardinal direction indicators. The variable edge-list GAT is the training
+implementation. A fixed dense relation-ID/geometry tensor is converted to the
+same equation for export parity; the parity test compares both paths using the
+same layer weights.
+
+## ADR-0008: crop margin and tiny visual encoder
+
+**Status:** accepted for the CPU milestone.
+
+The 12% crop setting is applied on each side as a fraction of candidate width
+and height, then clipped to the normalized screen. The CPU crop encoder is a
+small convolutional token adapter that emits exactly the configured `P`
+tokens. It preserves the MobileViT-S interface and shape contract without
+claiming MobileViT-S pretrained accuracy.
+
+## ADR-0009: sparse candidate conditioning
+
+**Status:** accepted.
+
+Command tokens cross-attend to the flattened valid candidate groups. Each
+candidate group is then reshaped into its own batch item and attends only to
+the shared command stream plus its own node/crop tokens. This avoids a dense
+cross-candidate attention matrix; `test_sparse_grounder.py` fixes the local
+isolation invariant.
+
+## ADR-0010: CPU export path
+
+**Status:** accepted for the CPU milestone.
+
+ONNX export uses the legacy TorchScript exporter with fast-path Transformer
+kernels disabled during tracing because the installed CPU Torch build does not
+export its fused Transformer operator. ONNXRuntime parity is measured on the
+same fixed-shape tiny inputs. This is an export contract, not a mobile backend
+claim.
+
+## ADR-0011: Auditable CPU runtime logging
+
+**Status:** accepted.
+
+Runtime diagnostics use opt-in JSON events containing dimensions, counts,
+selected IDs and action metadata, never screenshot pixels or raw OCR text.
+The pipeline accepts an injected logger, while callers explicitly configure
+the JSON handler when they need persistent diagnostics. This keeps tests and
+default library use quiet without losing structured observability.
+
+## ADR-0012: Offline duplicate-audit thresholds
+
+**Status:** accepted for the dataset framework.
+
+Duplicate auditing reports exact hashes first, then average-hash matches within
+four differing bits, then OCR-token Jaccard matches. If an offline embedding
+similarity map is supplied, OCR matches also require similarity at least 0.98.
+The thresholds live in `configs/data/dedup.yaml`; no embedding model runs in
+the default CPU test path.
+
+## ADR-0013: Public reconstruction model bundle
+
+**Status:** accepted for production integration.
+
+The default public adapters are ScreenParser YOLO11-L, docTR
+`crnn_vgg16_bn`, a TorchVision MobileNetV3-small shared icon/actionability/node
+feature backbone, compact BERT `L-6_H-256_A-4`, and timm MobileViT-S. The
+detector starts at 1280-pixel long edge, confidence 0.10, and NMS IoU 0.10.
+These choices and thresholds come from the supplied reconstruction contract,
+not the paper. Registry intent is mutable; only a resolved lock plus local
+digests identifies an experiment's exact bundle.
+
+## ADR-0014: Environment-rooted state and generated handoff
+
+**Status:** accepted.
+
+Real data, weights/caches, and runs use `SCREEN2ACTION_DATA_ROOT`,
+`SCREEN2ACTION_CACHE_ROOT`, and `SCREEN2ACTION_RUN_ROOT`. The repository keeps
+registries and generated handoff metadata but no external bytes. Handoff paths
+are relative or environment-rooted, and host reporting excludes usernames,
+absolute paths, environment values, and credentials.
+
+## ADR-0015: Fidelity-tier traceability
+
+**Status:** accepted.
+
+Requirements are tracked independently across CPU architecture, production
+integration, paper-reference training, and deployment/export. Tiny-model
+shape/parity or fixture success may complete the first dimension while the
+other dimensions remain partial or not started. This prevents interface tests
+from becoming production or reproduction claims.

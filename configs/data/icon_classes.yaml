@@ -1,0 +1,7 @@
+version: 0.1
+status: taxonomy_pending
+expected_count: 87
+classes: []
+notes:
+  - The paper specifies an 87-way MobileNetV3-small output but does not provide the class manifest.
+  - Exact 87-class reproduction is blocked until a licensed, versioned manifest is supplied.

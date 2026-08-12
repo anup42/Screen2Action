@@ -1,0 +1,8 @@
+name: stage4_qat
+epochs: 3
+global_batch_size: 256
+learning_rate_new_heads: 0.00002
+learning_rate_pretrained: 0.000002
+weight_decay: 0.01
+gradient_clip_norm: 1.0
+representative_split: train

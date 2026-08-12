@@ -1,0 +1,14 @@
+name: tiny_cpu
+device: cpu
+d: 64
+command_layers: 2
+graph_layers: 1
+command_heads: 4
+command_ffn: 256
+command_max_tokens: 64
+node_text_max_tokens: 16
+retrieval_top_k: 4
+ssb_budget: 256
+crop_size: 64
+crop_tokens: 16
+crop_encoder: tiny_cnn

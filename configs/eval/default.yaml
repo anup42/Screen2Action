@@ -1,0 +1,7 @@
+ssb_budgets: [128, 256, 512]
+retrieval_top_k: [4, 8, 16]
+relation_rerank_lambda: 0.30
+bootstrap_samples: 10000
+seeds: [7, 17, 27]
+small_target_area_threshold: 0.02
+dense_screen_node_threshold: 40

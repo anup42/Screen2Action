@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Datasets and generated media
+data/raw/
+data/processed/
+datasets/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Training and export artifacts
+checkpoints/
+outputs/
+artifacts/
+runs/
+cache/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Generated reports; retain the directory marker
+reports/*
+!reports/.gitkeep
+
+# Generated handoff metadata is intentionally versioned.
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

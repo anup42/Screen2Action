@@ -1,0 +1,15 @@
+name: fast_roi
+device: cuda
+d: 256
+command_layers: 6
+command_heads: 4
+command_ffn: 1024
+command_max_tokens: 64
+node_text_max_tokens: 16
+retrieval_top_k: 8
+ssb_budget: 512
+crop_size: 192
+crop_tokens: 144
+crop_encoder: detector_roi_align
+perception: learned
+variant: fast_roi

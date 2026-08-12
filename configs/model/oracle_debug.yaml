@@ -1,0 +1,9 @@
+name: oracle_debug
+device: cpu
+d: 64
+command_layers: 2
+graph_layers: 1
+retrieval_top_k: 4
+ssb_budget: 128
+perception: oracle
+grounding: click_only

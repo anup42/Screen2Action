@@ -1,0 +1,58 @@
+schema_version: 1
+registry_id: screen2action_public_sources_v1
+raw_root_environment: SCREEN2ACTION_DATA_ROOT
+sources:
+  guicourse_guiact:
+    provider: official_gui_course_release
+    revision: unresolved
+    license_identifier: NOASSERTION
+    acceptance_required: true
+    train_eligible: true
+    subsets: [web_single, smartphone]
+    note: Convert only examples whose labels map without semantic coercion.
+  guicourse_guienv:
+    provider: official_gui_course_release
+    revision: unresolved
+    license_identifier: NOASSERTION
+    acceptance_required: true
+    train_eligible: true
+    optional: true
+    note: Optional grounding and OCR pretraining source.
+  amex:
+    provider: official_amex_release
+    revision: unresolved
+    license_identifier: NOASSERTION
+    acceptance_required: true
+    train_eligible: true
+    note: Supports sample-first and verified multipart archive assembly.
+  android_control:
+    provider: google_research
+    revision: unresolved
+    license_identifier: NOASSERTION
+    acceptance_required: true
+    train_eligible: true
+    note: Preserve official TFRecord episode, step, and split identity.
+  wave_ui:
+    provider: agentsea_official
+    revision: unresolved
+    license_identifier: NOASSERTION
+    acceptance_required: true
+    train_eligible: true
+    note: Official WaveUI source only.
+  rico_semantics:
+    provider: official_rico_release
+    revision: unresolved
+    license_identifier: NOASSERTION
+    acceptance_required: true
+    train_eligible: true
+    optional: true
+    note: Optional icon-semantic and label-association source.
+  screenspot:
+    provider: seeclick_official
+    revision: unresolved
+    license_identifier: NOASSERTION
+    acceptance_required: true
+    train_eligible: false
+    evaluation_only: true
+    hard_leakage_guard: true
+    note: Forbidden in training, augmentation, threshold tuning, and model selection.

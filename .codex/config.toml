@@ -1,0 +1,4 @@
+# Repository-local Codex defaults. Keep task instructions in AGENTS.md.
+[project]
+python = "python"
+default_device = "cpu"

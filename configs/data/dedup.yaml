@@ -1,0 +1,6 @@
+exact_image_hash: true
+perceptual_hash: true
+perceptual_hash_distance_threshold: 4
+ocr_jaccard_threshold: 0.90
+image_embedding_similarity_threshold: 0.98
+embedding_dedup_enabled_by_default: false

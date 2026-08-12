@@ -1,0 +1,74 @@
+schema_version: 1
+registry_id: screen2action_public_reconstruction_v1
+cache_environment: SCREEN2ACTION_CACHE_ROOT
+roles:
+  ui_detector_screenparser:
+    backend: ultralytics
+    upstream_identifier: docling-project/ScreenParser
+    artifact_selector: model-card-declared-yolo11l-weight
+    license_identifier: NOASSERTION
+    license_note: Resolve and record the model-card license before download.
+    preprocessing:
+      color: RGB
+      input_long_edge: 1280
+      confidence_threshold: 0.10
+      nms_iou_threshold: 0.10
+    output:
+      boxes: pixel_xyxy
+      scores: float_0_1
+      classes: original_55_class_ids
+    reconstruction_caveat: Web-domain leaf detections require a mobile-container audit.
+  ocr_crnn_vgg16_bn:
+    backend: doctr
+    upstream_identifier: doctr.models.recognition.crnn_vgg16_bn
+    artifact_selector: pretrained_default
+    license_identifier: Apache-2.0
+    license_note: Verify code and selected weight terms at lock resolution.
+    preprocessing:
+      input: pre_cropped_text_like_regions
+      text_detection_fallback: false
+    output:
+      text: unicode_string
+      confidence: float_0_1
+    reconstruction_caveat: Recognition-only crops come primarily from ScreenParser.
+  icon_backbone_mobilenet_v3_small:
+    backend: torchvision
+    upstream_identifier: torchvision.models.mobilenet_v3_small
+    artifact_selector: DEFAULT
+    license_identifier: BSD-3-Clause
+    license_note: Custom heads are repository-trained and have separate provenance.
+    preprocessing:
+      weights_transform: enum_declared
+      input: node_crop_rgb
+    output:
+      icon_logits: 87
+      actionability_logits: 4
+      node_feature_dimension: 256
+    reconstruction_caveat: Sharing one backbone across all three heads is public reconstruction.
+  command_encoder_bert_l6_h256_a4:
+    backend: transformers
+    upstream_identifier: google/bert_uncased_L-6_H-256_A-4
+    artifact_selector: pinned_huggingface_revision
+    license_identifier: Apache-2.0
+    license_note: Resolve the immutable Hub commit before download.
+    preprocessing:
+      max_tokens: 64
+      tokenizer: upstream
+    output:
+      retrieval: final_cls_state
+      token_states: all_final_hidden_states
+      dimension: 256
+    reconstruction_caveat: Node text uses a lightweight shared or separately configured encoder.
+  crop_encoder_mobilevit_s:
+    backend: timm
+    upstream_identifier: timm/mobilevit_s.cvnets_in1k
+    artifact_selector: pinned_huggingface_revision
+    license_identifier: Apache-2.0
+    license_note: Verify weight-card terms and immutable Hub commit at resolution.
+    preprocessing:
+      color: RGB
+      input_size: [192, 192]
+    output:
+      spatial_tokens: 144
+      dimension: 256
+    reconstruction_caveat: Adaptive 12x12 projection is required if the native stage differs.

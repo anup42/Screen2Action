@@ -1,0 +1,37 @@
+name: paper_reference
+device: cuda_optional
+d: 256
+command_layers: 6
+graph_layers: 2
+command_heads: 4
+command_ffn: 1024
+command_max_tokens: 64
+node_text_max_tokens: 16
+retrieval_top_k: 8
+ssb_budget: 512
+crop_size: 192
+crop_tokens: 144
+crop_encoder: mobilevit_s_interface
+perception:
+  detector: yolov11_l_interface
+  ocr: crnn_interface
+  icon_classifier: mobilenetv3_small_interface
+  icon_classes: 87
+  actionability_labels: 4
+grounding:
+  sparse_blocks: 2
+  attention_heads: 4
+  crop_expansion_fraction: 0.12
+training:
+  stage_epochs: [12, 8, 6]
+  new_head_lr: 0.0002
+  pretrained_encoder_lr: 0.00002
+  weight_decay: 0.05
+  warmup_fraction: 0.05
+  gradient_clip_norm: 1.0
+  global_command_batch_size: 256
+  ui_contrastive_temperature: 0.07
+  ocr_frozen_after_perception: true
+notes:
+  - CUDA is optional at this milestone; CPU interfaces remain supported.
+  - Pretrained detector/OCR/icon weights and the 87-class manifest are not bundled.
