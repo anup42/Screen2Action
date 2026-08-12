@@ -12,17 +12,27 @@ retrieval_top_k: 8
 ssb_budget: 512
 crop_size: 192
 crop_tokens: 144
-crop_encoder: mobilevit_s_interface
+model_registry: configs/models/registry.yaml
+model_lock: configs/models/lock.json
+graph_attention_variant: paper_eq_v1
+relation_reranker_variant: paper_eq_v1
+node_text_strategy: shared_wordpiece
+command_encoder: compact_bert_locked_auto
+crop_encoder: mobilevit_s_locked_timm
 perception:
-  detector: yolov11_l_interface
-  ocr: crnn_interface
-  icon_classifier: mobilenetv3_small_interface
+  detector: screenparser_yolo11_l_locked
+  ocr: doctr_crnn_vgg16_bn_locked
+  icon_classifier: mobilenetv3_small_locked_shared_heads
   icon_classes: 87
   actionability_labels: 4
 grounding:
   sparse_blocks: 2
   attention_heads: 4
   crop_expansion_fraction: 0.12
+  confidence_target: grounding_correctness_v1
+  confidence_loss_enabled: true
+  confidence_warmup_steps: 0
+  confidence_refresh_interval: 1
 training:
   stage_epochs: [12, 8, 6]
   new_head_lr: 0.0002

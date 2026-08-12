@@ -12,6 +12,7 @@ from screen2action.data.schema import EdgeRecord, RelationType
 
 RELATION_ORDER = (RelationType.CONTAINMENT, RelationType.PROXIMITY, RelationType.ORDINAL)
 RELATION_TO_ID = {relation: index for index, relation in enumerate(RELATION_ORDER)}
+GRAPH_ATTENTION_VARIANTS = ("paper_eq_v1", "cpu_reconstruction_v1")
 
 
 def edge_tensors(
@@ -63,16 +64,22 @@ class RelationAwareGraphAttention(nn.Module):
         geometry_dim: int = 12,
         relation_count: int = len(RELATION_ORDER),
         dropout: float = 0.0,
+        variant: str = "cpu_reconstruction_v1",
     ) -> None:
         super().__init__()
         if embedding_dim % heads != 0:
             raise ValueError("embedding_dim must be divisible by heads")
         if relation_count <= 0 or geometry_dim <= 0:
             raise ValueError("relation_count and geometry_dim must be positive")
+        if variant not in GRAPH_ATTENTION_VARIANTS:
+            raise ValueError(f"unknown graph-attention variant: {variant}")
         self.embedding_dim = embedding_dim
         self.heads = heads
         self.head_dim = embedding_dim // heads
         self.relation_count = relation_count
+        self.variant = variant
+        self.paper_query = nn.Linear(embedding_dim, embedding_dim)
+        self.paper_key = nn.Linear(embedding_dim, embedding_dim)
         self.query = nn.ModuleList(
             nn.Linear(embedding_dim, embedding_dim) for _ in range(relation_count)
         )
@@ -122,12 +129,18 @@ class RelationAwareGraphAttention(nn.Module):
                 if local_positions.numel() == 0:
                     continue
                 source = edge_index[0, local_positions]
-                query = self.query[relation_id](node_features[destination]).view(
-                    self.heads, self.head_dim
-                )
-                key = self.key[relation_id](node_features[source]).view(
-                    -1, self.heads, self.head_dim
-                )
+                if self.variant == "paper_eq_v1":
+                    query = self.paper_query(node_features[destination]).view(
+                        self.heads, self.head_dim
+                    )
+                    key = self.paper_key(node_features[source]).view(-1, self.heads, self.head_dim)
+                else:
+                    query = self.query[relation_id](node_features[destination]).view(
+                        self.heads, self.head_dim
+                    )
+                    key = self.key[relation_id](node_features[source]).view(
+                        -1, self.heads, self.head_dim
+                    )
                 geometry = self.geometry[relation_id](relative_geometry[local_positions]).view(
                     -1, self.heads, self.head_dim
                 )
@@ -162,6 +175,27 @@ class RelationAwareGraphAttention(nn.Module):
     ) -> torch.Tensor:
         """Consume fixed `[N,N]` relation IDs and `[N,N,G]` geometry."""
 
+        if node_features.ndim == 3:
+            if relation_ids.ndim != 3 or relative_geometry.ndim != 4:
+                raise ValueError("batched dense relations must have shape [B,N,N] and [B,N,N,G]")
+            if relation_ids.shape[0] != node_features.shape[0]:
+                raise ValueError("batched dense graph count does not match node features")
+            if valid_nodes is None:
+                valid_nodes = torch.ones(
+                    node_features.shape[:2], dtype=torch.bool, device=node_features.device
+                )
+            if valid_nodes.shape != node_features.shape[:2]:
+                raise ValueError("valid_nodes must have shape [B,N]")
+            outputs = [
+                self.forward_dense(
+                    node_features[index],
+                    relation_ids[index],
+                    relative_geometry[index],
+                    valid_nodes[index],
+                )
+                for index in range(node_features.shape[0])
+            ]
+            return torch.stack(outputs) * valid_nodes.unsqueeze(-1).to(node_features.dtype)
         if relation_ids.ndim != 2 or relation_ids.shape[0] != relation_ids.shape[1]:
             raise ValueError("relation_ids must have square shape [N, N]")
         if relative_geometry.shape[:2] != relation_ids.shape:
@@ -177,6 +211,48 @@ class RelationAwareGraphAttention(nn.Module):
             relation_ids[source, destination],
             relative_geometry[source, destination],
         )
+
+    def forward_batched_edges(
+        self,
+        node_features: torch.Tensor,
+        edge_index: torch.Tensor,
+        relation_ids: torch.Tensor,
+        relative_geometry: torch.Tensor,
+        *,
+        valid_nodes: torch.Tensor,
+        valid_edges: torch.Tensor,
+    ) -> torch.Tensor:
+        """Consume padded edge lists and return `[B,N,D]` with invalid nodes zeroed."""
+
+        if node_features.ndim != 3 or edge_index.ndim != 3 or edge_index.shape[1] != 2:
+            raise ValueError("batched nodes/edges must have shapes [B,N,D] and [B,2,E]")
+        batch, node_count, _ = node_features.shape
+        edge_count = edge_index.shape[-1]
+        if relation_ids.shape != (batch, edge_count) or valid_edges.shape != (
+            batch,
+            edge_count,
+        ):
+            raise ValueError("relation IDs and edge mask must have shape [B,E]")
+        if relative_geometry.shape[:2] != (batch, edge_count):
+            raise ValueError("relative geometry must have shape [B,E,G]")
+        if valid_nodes.shape != (batch, node_count):
+            raise ValueError("valid node mask must have shape [B,N]")
+        outputs = []
+        for index in range(batch):
+            edge_mask = valid_edges[index]
+            local_edges = edge_index[index, :, edge_mask]
+            if local_edges.numel() and (
+                int(local_edges.min()) < 0 or int(local_edges.max()) >= node_count
+            ):
+                raise ValueError("padded edge index references an invalid node position")
+            output = self._forward_edges(
+                node_features[index],
+                local_edges,
+                relation_ids[index, edge_mask],
+                relative_geometry[index, edge_mask],
+            )
+            outputs.append(output * valid_nodes[index].unsqueeze(-1).to(output.dtype))
+        return torch.stack(outputs)
 
 
 class DenseRelationGraphAttention(nn.Module):
@@ -208,6 +284,7 @@ class RelationGraphEncoder(nn.Module):
         geometry_dim: int = 12,
         relation_count: int = len(RELATION_ORDER),
         dropout: float = 0.0,
+        variant: str = "cpu_reconstruction_v1",
     ) -> None:
         super().__init__()
         if layers <= 0:
@@ -219,6 +296,7 @@ class RelationGraphEncoder(nn.Module):
                 geometry_dim=geometry_dim,
                 relation_count=relation_count,
                 dropout=dropout,
+                variant=variant,
             )
             for _ in range(layers)
         )

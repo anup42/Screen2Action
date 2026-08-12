@@ -69,6 +69,7 @@ addopts = "-ra -m 'not network and not gpu'"
 markers = [
   "network: opt-in test that accesses an official network source",
   "gpu: opt-in test that requires an available CUDA device",
+  "integration_model: offline end-to-end model integration test",
 ]
 
 [tool.ruff]

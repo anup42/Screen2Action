@@ -388,11 +388,10 @@ class FullScreenPerception:
         )
         parameter = next(self.visual_model.parameters())
         device = parameter.device
-        with torch.no_grad():
-            output: IconActionabilityOutput = self.visual_model(crops.to(device) / 255.0)
-            probabilities = torch.softmax(output.icon_logits, dim=-1).cpu()
-            action_logits = output.actionability_logits.cpu()
-            features = output.visual_features.cpu()
+        output: IconActionabilityOutput = self.visual_model(crops.to(device) / 255.0)
+        probabilities = torch.softmax(output.icon_logits, dim=-1).detach().cpu()
+        action_logits = output.actionability_logits.detach().cpu()
+        features = output.visual_features.detach().cpu()
         updates: dict[int, NodeRecord] = {}
         for index, node in enumerate(candidates):
             icon = probabilities[index]

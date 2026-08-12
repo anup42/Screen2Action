@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** ACTIVE
-**Active milestone:** Milestone 4 - unified trainable paper-reference model
+**Active milestone:** Milestone 5 - canonical data lake and audits
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -112,21 +112,21 @@ measurement under the stated protocol.
 - [x] Offline fake-backbone/cache tests; real-model execution remains an
       explicitly unverified external gate.
 
-### Milestone 4 - unified trainable paper-reference model
+### Milestone 4 - unified trainable paper-reference model (COMPLETE)
 
-- [ ] `Screen2ActionModel` separates perceive/encode/ground/forward and permits
+- [x] `Screen2ActionModel` separates perceive/encode/ground/forward and permits
       caller-controlled train/eval/freezing.
-- [ ] Batched multi-screen/multi-command representation and grouped sampler.
-- [ ] 256-D multimodal node fusion with provenance/missing-modality masks.
-- [ ] Explicit paper-equation and CPU-reconstruction graph/reranker variants;
+- [x] Batched multi-screen/multi-command representation and grouped sampler.
+- [x] 256-D multimodal node fusion with provenance/missing-modality masks.
+- [x] Explicit paper-equation and CPU-reconstruction graph/reranker variants;
       edge-list/dense/batched parity.
-- [ ] Learned command-independent retention connected to Gumbel training and
+- [x] Learned command-independent retention connected to Gumbel training and
       deterministic inference selection.
-- [ ] Lazy compact BERT and MobileViT adapters with fake-backbone tests.
-- [ ] MobileViT contract `[B*K, 144, 256]` and shape probe.
-- [ ] 2-D box encoding, candidate/crop masks, grouped sparse isolation.
-- [ ] Typed click/long-press/scroll/drag/confidence heads and masked losses.
-- [ ] Tiny cached forward/backward and model command-independence tests.
+- [x] Lazy compact BERT and MobileViT adapters with fake-backbone tests.
+- [x] MobileViT contract `[B*K, 144, 256]` and shape probe.
+- [x] 2-D box encoding, candidate/crop masks, grouped sparse isolation.
+- [x] Typed click/long-press/scroll/drag/confidence heads and masked losses.
+- [x] Tiny cached forward/backward and model command-independence tests.
 
 ### Milestone 5 - canonical data lake and audits
 
@@ -211,6 +211,11 @@ measurement under the stated protocol.
   command-independent real/oracle/cached orchestration, and an atomic sharded
   multi-worker cache. Sixteen focused tests passed, including a Windows lock
   race. Real public weights remain unfetched and therefore unclaimed.
+- **2026-08-13:** Added the unified trainable model, padded multi-screen masks,
+  grouped command sampler, 256-D paper profile, graph variants with batched
+  parity, exact relation reranking, learned retention, offline compact-BERT and
+  MobileViT adapters, sparse absolute-box conditioning, and typed action and
+  confidence losses. Milestone 5 is active; public weights remain unexecuted.
 
 ## Discoveries and surprises
 
@@ -249,6 +254,10 @@ measurement under the stated protocol.
   beside coarse SSB types. Label generated containers as reconstruction,
   propagate OCR to at most one enclosing control, and cache only
   command-independent frame state.
+- **D-008 (trainable model boundary):** Keep model mode/freezing under caller
+  control, compute frame retention before commands, name paper and CPU graph
+  variants explicitly, and treat `grounding_correctness_v1` as a configurable
+  reconstruction rather than a paper-defined confidence target.
 
 ## Validation ledger
 
@@ -293,6 +302,9 @@ measurement under the stated protocol.
 - **2026-08-12:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
   Mypy, formatting/compilation, and 70 offline tests passed; three opt-in real
   model/network/GPU tests were deselected as intended.
+- **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; Ruff,
+  Mypy, formatting/compilation, and 87 offline tests passed; three opt-in
+  network/GPU tests were deselected as intended.
 
 ## Remaining blockers and continuation
 

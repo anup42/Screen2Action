@@ -40,6 +40,23 @@ reconstructions. They are configured, logged, and recorded in
 - CPU is a supported execution device for all public APIs. CUDA accelerates
   optional work but never changes schemas.
 
+## Unified trainable model
+
+`Screen2ActionModel` owns the node fusion, graph, retention, command,
+retrieval/reranking, crop, sparse grounding, action, and confidence modules. It
+exposes `perceive`, `encode_frames`, `ground_commands`, and a stage-aware
+`forward`. `EncodedFrameBatch` pads multiple unique screens and carries valid
+node, edge, text-token, selection, candidate, and crop-token masks. A
+screen-grouped sampler keeps every command for a screen together so frame
+encoding is performed once and command work fans out afterward.
+
+The paper profile uses 256-D fusion, two `paper_eq_v1` relation-attention
+layers, compact BERT CLS/token states, `K=8`, and a locked MobileViT-S adapter
+that produces a 12x12 grid of 256-D crop tokens. The separate
+`cpu_reconstruction_v1` graph variant and tiny crop/command modules remain for
+offline testing. The thin inference runtime calls the same model and refuses
+to silently change train/eval mode.
+
 ## State and provenance
 
 External assets live under environment roots. Registries are mutable intent;

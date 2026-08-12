@@ -31,6 +31,8 @@ def select_top_k_actionable(
     *,
     k: int = 8,
     actionability_threshold: float = 0.5,
+    requested_action_index: int | None = None,
+    valid_mask: torch.Tensor | None = None,
 ) -> RetrievalResult:
     """Select actionable nodes then fill fixed K from valid high-score nodes."""
 
@@ -43,32 +45,54 @@ def select_top_k_actionable(
         raise ValueError("scores and nodes have incompatible lengths")
     if not 0.0 <= actionability_threshold <= 1.0:
         raise ValueError("actionability_threshold must be in [0, 1]")
+    if requested_action_index is not None and not 0 <= requested_action_index < 4:
+        raise ValueError("requested_action_index must be in [0, 3]")
+    if valid_mask is None:
+        valid_mask = torch.ones(len(node_list), dtype=torch.bool, device=scores.device)
+    if valid_mask.shape != scores.shape or valid_mask.dtype is not torch.bool:
+        raise ValueError("valid_mask must be boolean with shape [N]")
     actionability = torch.tensor(
         [
-            float(torch.sigmoid(torch.tensor(node.actionability_logits)).max().item())
-            >= actionability_threshold
+            (
+                bool(node.actionability_mask[requested_action_index])
+                and float(
+                    torch.sigmoid(torch.tensor(node.actionability_logits[requested_action_index]))
+                )
+                >= actionability_threshold
+                if requested_action_index is not None
+                else any(
+                    known and float(torch.sigmoid(torch.tensor(logit))) >= actionability_threshold
+                    for logit, known in zip(
+                        node.actionability_logits, node.actionability_mask, strict=True
+                    )
+                )
+            )
             for node in node_list
         ],
         dtype=torch.bool,
         device=scores.device,
     )
     valid_order = sorted(
-        range(len(node_list)),
+        [index for index in range(len(node_list)) if bool(valid_mask[index])],
         key=lambda index: (-float(scores[index].detach().cpu()), node_list[index].node_id),
     )
     actionable_order = [index for index in valid_order if bool(actionability[index])]
     chosen = actionable_order[:k]
     chosen.extend(index for index in valid_order if index not in chosen and len(chosen) < k)
-    if chosen and len(chosen) < k:
-        chosen.extend([chosen[0]] * (k - len(chosen)))
     indices = chosen + [-1] * (k - len(chosen))
     valid_flags = [index >= 0 for index in indices]
     valid = torch.tensor(valid_flags, dtype=torch.bool, device=scores.device)
     safe_indices = torch.tensor(
         [max(index, 0) for index in indices], dtype=torch.long, device=scores.device
     )
-    selected_scores = scores[safe_indices]
-    selected_actionable = actionability[safe_indices] & valid
+    if node_list:
+        selected_scores = torch.where(
+            valid, scores[safe_indices], torch.zeros_like(valid, dtype=scores.dtype)
+        )
+        selected_actionable = actionability[safe_indices] & valid
+    else:
+        selected_scores = torch.zeros(k, dtype=scores.dtype, device=scores.device)
+        selected_actionable = torch.zeros(k, dtype=torch.bool, device=scores.device)
     node_ids = tuple(node_list[index].node_id if index >= 0 else -1 for index in indices)
     candidates = tuple(
         RetrievalCandidate(
@@ -122,14 +146,22 @@ class RelationAwareReranker(nn.Module):
         self.lambda_ref = lambda_ref
         self.geometry_dim = geometry_dim
         self.relation_weights = nn.Parameter(torch.zeros(len(RELATION_ORDER)))
-        self.compatibility = nn.ModuleList(nn.Linear(geometry_dim, 1) for _ in RELATION_ORDER)
-        self.node_gate = nn.Linear(embedding_dim, 1)
+        self.relation_embedding = nn.Embedding(len(RELATION_ORDER), embedding_dim)
+        self.compatibility = nn.ModuleList(
+            nn.Sequential(
+                nn.Linear(embedding_dim * 3 + geometry_dim, embedding_dim),
+                nn.GELU(),
+                nn.Linear(embedding_dim, 1),
+            )
+            for _ in RELATION_ORDER
+        )
 
     def forward(
         self,
         base_scores: torch.Tensor,
         node_features: torch.Tensor,
         edges: Iterable[EdgeRecord],
+        valid_nodes: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Return base scores plus relation-specific incoming evidence."""
 
@@ -137,10 +169,21 @@ class RelationAwareReranker(nn.Module):
             raise ValueError("base_scores must be [N] and node_features must be [N,D]")
         if base_scores.numel() != node_features.shape[0]:
             raise ValueError("base_scores and node_features have incompatible lengths")
+        if valid_nodes is None:
+            valid_nodes = torch.ones(base_scores.shape, dtype=torch.bool, device=base_scores.device)
+        if valid_nodes.shape != base_scores.shape or valid_nodes.dtype is not torch.bool:
+            raise ValueError("valid_nodes must be boolean with shape [N]")
         output = base_scores.clone()
-        edge_list = list(edges)
+        edge_list = [
+            edge
+            for edge in edges
+            if edge.src < len(valid_nodes)
+            and edge.dst < len(valid_nodes)
+            and bool(valid_nodes[edge.src])
+            and bool(valid_nodes[edge.dst])
+        ]
         if not edge_list:
-            return output
+            return output.masked_fill(~valid_nodes, -1e9)
         normalized_weights = torch.softmax(self.relation_weights, dim=0)
         for relation_index, relation in enumerate(RELATION_ORDER):
             relation_edges = [edge for edge in edge_list if edge.relation is relation]
@@ -148,7 +191,10 @@ class RelationAwareReranker(nn.Module):
                 incoming = [edge for edge in relation_edges if edge.dst == destination]
                 if not incoming:
                     continue
-                source_scores = torch.stack([base_scores[edge.src] for edge in incoming])
+                source_indices = torch.tensor(
+                    [edge.src for edge in incoming], dtype=torch.long, device=node_features.device
+                )
+                source_scores = base_scores[source_indices]
                 geometry = torch.zeros(
                     (len(incoming), self.geometry_dim),
                     dtype=node_features.dtype,
@@ -160,14 +206,50 @@ class RelationAwareReranker(nn.Module):
                         geometry[edge_index, : len(values)] = torch.tensor(
                             values, dtype=geometry.dtype, device=geometry.device
                         )
-                compatibility = self.compatibility[relation_index](geometry).squeeze(-1)
+                destination_states = (
+                    node_features[destination].unsqueeze(0).expand(len(incoming), -1)
+                )
+                source_states = node_features[source_indices]
+                relation_states = (
+                    self.relation_embedding.weight[relation_index]
+                    .unsqueeze(0)
+                    .expand(len(incoming), -1)
+                )
+                compatibility_input = torch.cat(
+                    (destination_states, source_states, geometry, relation_states), dim=-1
+                )
+                compatibility = self.compatibility[relation_index](compatibility_input).squeeze(-1)
                 neighbor_weights = torch.softmax(compatibility, dim=0)
-                gate = torch.sigmoid(self.node_gate(node_features[destination])).squeeze(-1)
                 output[destination] = (
                     output[destination]
                     + self.lambda_ref
                     * normalized_weights[relation_index]
-                    * gate
                     * (neighbor_weights * source_scores).sum()
                 )
-        return output
+        return output.masked_fill(~valid_nodes, -1e9)
+
+    def forward_batched(
+        self,
+        base_scores: torch.Tensor,
+        node_features: torch.Tensor,
+        edges: Iterable[Iterable[EdgeRecord]],
+        valid_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """Rerank a padded screen batch without allowing padded evidence."""
+
+        edge_batches = list(edges)
+        if base_scores.ndim != 2 or node_features.ndim != 3:
+            raise ValueError("batched scores/nodes must have shapes [B,N] and [B,N,D]")
+        if valid_nodes.shape != base_scores.shape or len(edge_batches) != base_scores.shape[0]:
+            raise ValueError("batched reranker masks/edges do not match batch size")
+        return torch.stack(
+            [
+                self.forward(
+                    base_scores[index],
+                    node_features[index],
+                    edge_batches[index],
+                    valid_nodes[index],
+                )
+                for index in range(base_scores.shape[0])
+            ]
+        )

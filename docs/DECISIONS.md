@@ -198,3 +198,33 @@ perception-config, and schema digests. Cache files are sharded and atomically
 replaced under cross-process locks. NumPy and Pillow are explicit perception
 extras because the public input boundary supports their arrays/images and the
 public adapters require those conversions; they are not core dependencies.
+
+## ADR-0019: Trainable paper-profile variants and confidence reconstruction
+
+**Status:** accepted.
+
+The unified model names graph implementations `paper_eq_v1` and
+`cpu_reconstruction_v1`. The paper variant uses shared query/key projections,
+relation-specific values, relation embeddings, full 12-value geometry, and a
+softmax within each destination/relation neighborhood. Edge-list and padded
+dense paths share parameters and must remain numerically equivalent. Relation
+reranking consumes destination state, neighbor state, geometry, and relation
+embedding; neighbor gates and relation weights are separately normalized.
+
+Node retention is computed before commands. Training uses straight-through
+Gumbel masks plus target/reference survival and expected-budget losses;
+inference uses the existing exact independent knapsack followed by
+deterministic closure repair. Closure repair is not claimed to be a globally
+optimal dependency-constrained knapsack.
+
+Short OCR text shares compact-BERT WordPiece embeddings by default. An
+independent embedding is an explicit ablation and requires pre-tokenized node
+text. MobileViT's native final feature map is adaptively pooled to 12x12 and
+projected to 256 dimensions; this projection is a public reconstruction.
+
+The paper does not specify confidence labels. `grounding_correctness_v1`
+creates a detached label only when both selected candidate and predicted
+screen point are correct. Warm-up, refresh interval, and weight are configured;
+the loss can be disabled and existing held-out temperature scaling used alone.
+Long-press duration remains executor-defined. Scroll deltas and drag duration
+are bounded model outputs.

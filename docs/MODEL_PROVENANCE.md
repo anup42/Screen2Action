@@ -66,3 +66,16 @@ materialized from `crnn_vgg16_bn(pretrained=True)` by the asset provider. The
 MobileNetV3 adapter likewise reconstructs `weights=None` and loads the locked
 TorchVision state. This avoids implicit downloads while preserving the exact
 download provenance in the model lock.
+
+Compact BERT uses `AutoTokenizer` and `AutoModel` with
+`local_files_only=True`. MobileViT-S uses a timm feature backbone reconstructed
+with `pretrained=False`, then loads a caller-selected locked state file. Its
+12x12 token-grid projection is repository-trained and has separate checkpoint
+provenance. Probe a downloaded crop encoder explicitly with:
+
+```text
+screen2action models probe-mobilevit --weight <locked-file> --device cpu --json
+```
+
+No real-model shape or semantic result is claimed until the opt-in test passes
+against a fully verified model-bundle lock.

@@ -36,3 +36,24 @@ def test_registry_listing_is_real_read_only_command(capsys: object) -> None:
     assert main(["models", "list", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
     assert "ui_detector_screenparser" in payload["roles"]
+
+
+def test_mobilevit_shape_probe_has_a_no_weight_dry_run(capsys: object) -> None:
+    assert (
+        main(
+            [
+                "models",
+                "probe-mobilevit",
+                "--weight",
+                "missing.safetensors",
+                "--batch-size",
+                "2",
+                "--dry-run",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert payload["command"] == "models probe-mobilevit"
+    assert payload["status"] == "dry_run"

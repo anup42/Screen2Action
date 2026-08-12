@@ -10,6 +10,7 @@ import torch
 
 from screen2action.data.schema import NodeType
 from screen2action.model_assets import load_model_lock, verify_locked_models
+from screen2action.models.mobilevit import MobileVitSCropEncoder
 from screen2action.perception.base import PreprocessingMetadata, UiDetection, normalize_image
 from screen2action.perception.doctr_crnn import DoctrCrnnBackend, DoctrCrnnVgg16Recognizer
 from screen2action.perception.icon_actionability import MobileNetV3IconActionability
@@ -82,6 +83,12 @@ def _run_real_smoke(device: str) -> None:
     assert output.icon_logits.shape == (2, 87)
     assert output.actionability_logits.shape == (2, 4)
     assert output.visual_features.shape == (2, 256)
+
+    crop_encoder = MobileVitSCropEncoder.from_locked_timm(paths["crop_encoder_mobilevit_s"]).to(
+        torch.device(device)
+    )
+    crop_tokens = crop_encoder(torch.rand((1, 3, 192, 192), device=torch.device(device)))
+    assert crop_tokens.shape == (1, 144, 256)
 
 
 def test_real_locked_perception_models_on_cpu() -> None:

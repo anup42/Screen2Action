@@ -24,6 +24,7 @@ REQUIRED_COMMAND_PATHS = (
     "models resolve-lock",
     "models fetch",
     "models verify",
+    "models probe-mobilevit",
     "data sources",
     "data download",
     "data register-local",
@@ -133,6 +134,17 @@ def _parser() -> argparse.ArgumentParser:
     verify.add_argument("--registry", type=Path, default=Path("configs/models/registry.yaml"))
     verify.add_argument("--cache-root", type=Path)
     _add_json(verify)
+    probe_mobilevit = _leaf(
+        model_commands,
+        "probe-mobilevit",
+        "probe the locked MobileViT-S crop-token shape contract",
+        "models probe-mobilevit",
+    )
+    probe_mobilevit.add_argument("--weight", type=Path, required=True)
+    probe_mobilevit.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    probe_mobilevit.add_argument("--batch-size", type=int, default=1)
+    _add_dry_run(probe_mobilevit)
+    _add_json(probe_mobilevit)
 
     data = groups.add_parser("data", help="download, normalize, audit, and freeze data")
     data_commands = data.add_subparsers(dest="data_command", required=True)
@@ -493,6 +505,15 @@ def _run_command(args: argparse.Namespace) -> dict[str, Any]:
             config=config.values,
         )
         return dataclasses.asdict(result)
+    if args.command_path == "models probe-mobilevit" and not args.dry_run:
+        import torch
+
+        from screen2action.models.mobilevit import MobileVitSCropEncoder
+
+        if args.device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("CUDA shape probe requested but torch.cuda.is_available() is false")
+        model = MobileVitSCropEncoder.from_locked_timm(args.weight).to(torch.device(args.device))
+        return model.shape_probe(batch_size=args.batch_size, device=args.device)
     read_only = _run_read_only(args)
     if read_only is not None:
         return read_only
