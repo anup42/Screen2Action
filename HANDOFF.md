@@ -5,8 +5,8 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: Correctness review - see `docs/plans/correctness_review.md`
-- Git branch/commit: `main` / `0866d62be6c0393013cc0125f9078c000d01c8f7`
+- Active milestone: None - correctness review complete; see `docs/plans/correctness_review.md`
+- Git branch/commit: `main` / `873fc8ae0c536bd76325aaf9f0fc47d44d6d6a97`
 - Source dirty at snapshot: `true`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
@@ -35,7 +35,7 @@ architecture/runbook documents listed in `AGENTS.md`.
 
 ## Last successful commands
 
-- `screen2action doctor --device cpu --json`
+- `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`
 - `python -m screen2action.tools.verify all`

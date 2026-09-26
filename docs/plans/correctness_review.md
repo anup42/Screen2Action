@@ -1,7 +1,7 @@
 # Implementation correctness review
 
-**Status:** IN PROGRESS
-**Active milestone:** Publication
+**Status:** COMPLETE
+**Active milestone:** None
 **Started:** 2026-09-26
 
 ## Purpose and observable outcome
@@ -29,7 +29,7 @@ Several pre-existing inaccessible local output directories remain out of scope.
       reproduce actionable defects with focused regression tests.
 - [x] Fix verified defects and update traceability and operational documentation.
 - [x] Run full verification and relevant slow tests.
-- [ ] IN PROGRESS: Refresh handoff, commit, push, and verify remote commit identity.
+- [x] Refresh handoff, commit, push, and verify remote commit identity.
 
 ## Progress
 
@@ -53,6 +53,9 @@ Several pre-existing inaccessible local output directories remain out of scope.
   experiment YAML, and updated traceability and training guidance.
 - 2026-09-26: Final offline verifier and separate paper-dimension ONNX parity
   passed. Implementation, regression tests, and documentation are ready to publish.
+- 2026-09-26: Published implementation commit `873fc8a` to `origin/main` and
+  verified that the remote SHA matches the local commit. Closed the review and
+  refreshed the handoff documentation.
 
 ## Discoveries and surprises
 
@@ -96,6 +99,13 @@ Several pre-existing inaccessible local output directories remain out of scope.
   framework/export warnings; 8.09 seconds. Covers paper-dimension graph and
   command partitions with locally initialized weights on CPU.
 - `git -c core.safecrlf=false diff --check`: exit 0.
+- Staged whitespace and credential-pattern checks passed; only reviewed source,
+  configuration, tests, and documentation were included (44 files).
+- `git push origin main`: exit 0; `git ls-remote origin refs/heads/main`
+  matched `873fc8ae0c536bd76325aaf9f0fc47d44d6d6a97` after publication.
+- After closing the plan and refreshing handoff, `python -m pytest
+  tests/unit/test_handoff.py -q -p no:cacheprovider --basetemp=outputs/rh1`:
+  exit 0; two passed in 2.88 seconds. Final unstaged whitespace check passed.
 
 ## Risks and continuation
 
@@ -110,9 +120,14 @@ old weights if desired, but do not claim an exact resume across changed code or
 configuration. Regenerate prior small-K or action-label-conditioned evaluation
 reports and their dependent calibration artifacts.
 
-Publication continuation: review the staged diff, commit, `git push origin main`,
-and compare `git rev-parse HEAD` with `git ls-remote origin refs/heads/main`.
+No local implementation work remains for this audit. External verification
+continues with the CUDA commands above and the licensed-data/model runbooks.
 
 ## Outcome
 
-Correctness fixes are implemented and locally verified. Publication is pending.
+Correctness fixes are implemented, locally verified, and published. Regression
+coverage demonstrates retrieval learning through hard selection, label-independent
+inference, correct action coordinates and masks, exact K evaluation, finite CPU
+FP16 heads, initialized exact resume, two-rank accumulated training and uneven
+validation, immutable data/calibration artifacts, and CPU ONNX parity. This is
+not a claim of exhaustive correctness or reproduced real-data/GPU/mobile results.

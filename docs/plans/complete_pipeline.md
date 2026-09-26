@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** COMPLETE
-**Active milestone:** Correctness review - see `docs/plans/correctness_review.md`
+**Active milestone:** None - correctness review complete; see `docs/plans/correctness_review.md`
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)
@@ -412,6 +412,12 @@ measurement under the stated protocol.
 - **2026-08-13:** `python -m screen2action.tools.verify all` - exit 0; 177
   Python files formatted, Ruff and Mypy passed, and 137 offline tests passed
   with nine opt-in network/GPU/slow tests deselected.
+- **2026-09-26:** Correctness review completed and published as `873fc8a`;
+  details and reconstruction boundaries are in `docs/plans/correctness_review.md`
+  and ADR-0027. `python -m screen2action.tools.verify all` - exit 0; 177 Python
+  files formatted, Ruff and Mypy passed (123 source files), 152 offline tests
+  passed, ten opt-in tests deselected. Separate paper-shape CPU ONNX parity
+  passed again. Real-data/model/GPU/mobile evidence boundaries remain unchanged.
 
 ## Remaining blockers and continuation
 
