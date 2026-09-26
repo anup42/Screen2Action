@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from screen2action import CONFIG_SCHEMA_VERSION
 

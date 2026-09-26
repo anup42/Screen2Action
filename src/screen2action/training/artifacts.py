@@ -99,10 +99,21 @@ def write_run_manifest(
     cache_manifest_sha256: str,
     world_size: int,
     device_type: str,
-    initial_checkpoint_sha256: str = "",
+    initial_checkpoint_sha256: str | None = "",
 ) -> tuple[Path, str, str]:
     """Create or verify one immutable run manifest and return its file digest."""
 
+    destination = run_directory / "run-manifest.json"
+    if initial_checkpoint_sha256 is None:
+        if not destination.is_file():
+            raise ValueError("exact resume requires the original run manifest")
+        previous = json.loads(destination.read_text(encoding="utf-8"))
+        if not isinstance(previous, dict) or not isinstance(previous.get("identity"), dict):
+            raise ValueError("existing run manifest is malformed")
+        recorded_initialization = previous["identity"].get("initial_checkpoint_sha256")
+        if not isinstance(recorded_initialization, str):
+            raise ValueError("existing run manifest initialization digest is malformed")
+        initial_checkpoint_sha256 = recorded_initialization
     identity: dict[str, object] = {
         "stage": stage,
         "config_sha256": config_sha256,
@@ -115,7 +126,6 @@ def write_run_manifest(
         "device_type": device_type,
     }
     identity_digest = hashlib.sha256(_canonical_bytes(identity)).hexdigest()
-    destination = run_directory / "run-manifest.json"
     if destination.is_file():
         existing = json.loads(destination.read_text(encoding="utf-8"))
         if not isinstance(existing, dict) or existing.get("identity_sha256") != identity_digest:

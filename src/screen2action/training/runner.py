@@ -190,6 +190,7 @@ def _screen_loss(
             "grounding_point_loss": grounding.point,
             "grounding_action_loss": grounding.action,
             "grounding_parameter_loss": grounding.parameters,
+            "ui_contrastive_loss": output.grounded_commands.retrieval_loss,
             "confidence_loss": grounding.confidence,
             "target_survival_loss": retention.target_survival,
             "reference_survival_loss": retention.reference_survival,
@@ -275,6 +276,7 @@ def _joint_loss(
             "grounding_point_loss": grounding.point,
             "grounding_action_loss": grounding.action,
             "grounding_parameter_loss": grounding.parameters,
+            "ui_contrastive_loss": downstream.grounded_commands.retrieval_loss,
             "confidence_loss": grounding.confidence,
             "target_survival_loss": retention.target_survival,
             "reference_survival_loss": retention.reference_survival,
@@ -963,7 +965,9 @@ def run_training_stage(
                 world_size=context.world_size,
                 device_type=context.device.type,
                 initial_checkpoint_sha256=(
-                    manifest_hash(init_checkpoint) if init_checkpoint is not None else ""
+                    None
+                    if resume is not None
+                    else (manifest_hash(init_checkpoint) if init_checkpoint is not None else "")
                 ),
             )
         run_manifest_path, run_manifest_digest, git_revision = cast(

@@ -9,6 +9,7 @@ import torch
 from torch import nn
 
 from screen2action.training.distributed import initialize_distributed, wrap_ddp
+from screen2action.training.engine import LossResult, Trainer
 
 
 def _free_port() -> int:
@@ -43,6 +44,21 @@ def _gloo_worker(rank: int, world_size: int, port: int, output: str) -> None:
             encoding="utf-8",
         )
         context.barrier()
+        buffered = nn.Sequential(nn.BatchNorm1d(2), nn.Linear(2, 1))
+        validation_model = wrap_ddp(buffered, context)
+        buffered[0].running_mean.fill_(float(rank))
+        trainer = Trainer(
+            validation_model,
+            torch.optim.SGD(validation_model.parameters(), lr=0.1),
+            distributed=context,
+        )
+        validation = trainer.validate(
+            [torch.ones(2, 2)] if rank == 0 else [],
+            lambda module, batch, step: LossResult(module(batch).square().mean(), {}, 2),
+        )
+        assert validation.examples == 2
+        assert torch.isfinite(torch.tensor(validation.mean_loss))
+        assert torch.equal(buffered[0].running_mean, torch.zeros(2))
     finally:
         context.cleanup()
 

@@ -1,7 +1,7 @@
 # Complete production, data, and GPU-training pipeline
 
 **Status:** COMPLETE
-**Active milestone:** None - implementation plan complete
+**Active milestone:** Correctness review - see `docs/plans/correctness_review.md`
 **Started:** 2026-08-12
 **Specification:** `Screen2Action_Remaining_Gaps_Codex_Prompt.md` supplied by
 the user (external input; not copied into the repository)

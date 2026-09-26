@@ -5,9 +5,9 @@
 ## Resume here
 
 - Active plan: `docs/plans/complete_pipeline.md`
-- Active milestone: None - implementation plan complete
-- Git branch/commit: `main` / `2a24647186480878bf4293ec60ccdec73fdf36d9`
-- Source dirty at snapshot: `false`
+- Active milestone: Correctness review - see `docs/plans/correctness_review.md`
+- Git branch/commit: `main` / `0866d62be6c0393013cc0125f9078c000d01c8f7`
+- Source dirty at snapshot: `true`
   (`HANDOFF.md` and `handoff.json` are excluded from this check).
 - Model lock: unresolved (`configs/models/lock.json`).
 

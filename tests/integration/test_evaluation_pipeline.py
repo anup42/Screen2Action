@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import csv
 import io
 import json
 from copy import deepcopy
@@ -279,7 +280,7 @@ def test_eval_reports_and_calibration_guard(
         {
             "mode": "sweep",
             "budgets": [512],
-            "retrieval_top_k": [8],
+            "retrieval_top_k": [1, 8],
             "ablations": [
                 "learned_selector",
                 "no_target_survival_loss",
@@ -294,7 +295,12 @@ def test_eval_reports_and_calibration_guard(
         cache_manifest=cache.root / "manifest.json",
         output_directory=tmp_path / "sweep",
     )
-    assert sweep["complete"] == 2
+    assert sweep["complete"] == 3
     assert sweep["requires_checkpoint"] == 1
     assert sweep["unsupported_optional"] == 1
     assert (tmp_path / "sweep" / "sweep.md").is_file()
+    with (tmp_path / "sweep" / "jobs" / "budget-512-k-1" / "predictions.csv").open(
+        encoding="utf-8", newline=""
+    ) as stream:
+        predictions = list(csv.DictReader(stream))
+    assert len(json.loads(predictions[0]["candidate_node_ids"])) == 1

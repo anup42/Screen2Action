@@ -31,7 +31,8 @@ def test_config_composition_environment_override_and_snapshot(tmp_path: Path) ->
     assert config.values["device"] == "cpu"
     assert config.values["retrieval_top_k"] == 8
     assert config.values["model"] == {"dropout": 0.25, "cache": "portable-cache"}
-    assert config.source_paths == ("parent.yaml", "child.yaml")
+    assert tuple(Path(path).name for path in config.source_paths) == ("parent.yaml", "child.yaml")
+    assert all(not Path(path).is_absolute() for path in config.source_paths)
     snapshot = write_resolved_config(config, tmp_path / "run")
     payload = yaml.safe_load(snapshot.read_text(encoding="utf-8"))
     assert payload["config_sha256"] == config.sha256

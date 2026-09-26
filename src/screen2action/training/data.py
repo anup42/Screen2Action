@@ -361,9 +361,17 @@ class CachedScreenBatchBuilder:
                     [source_x, source_y, destination_x, destination_y],
                     device=self.model.device,
                 )
+                duration, has_duration = _parameter_value(parameters, "duration")
+                parameter_targets[index, 6] = duration
+                parameter_mask[index, 6] = has_duration and bool(masks.get("parameters", False))
                 if bool(masks.get("parameters", False)):
                     parameter_mask[index, 2:6] = torch.tensor(
-                        [True, True, has_destination_x, has_destination_y],
+                        [
+                            bool(target_point_mask[index]),
+                            bool(target_point_mask[index]),
+                            has_destination_x,
+                            has_destination_y,
+                        ],
                         device=self.model.device,
                     )
                 if has_destination_x and has_destination_y:

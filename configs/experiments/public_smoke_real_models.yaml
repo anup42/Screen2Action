@@ -42,3 +42,11 @@ training:
   gumbel_temperature_end: 0.1
   gumbel_anneal_fraction: 0.8
   forced_positive_probability_first_two_epochs: 0.5
+  ui_contrastive_temperature: 0.07
+  loss_weights:
+    candidate: 1.0
+    point: 1.0
+    action: 0.4
+    ui: 0.2
+    survive: 0.5
+    budget: 0.05

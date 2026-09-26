@@ -40,6 +40,7 @@ no qualifying implementation evidence exists.
 | S2A-029 | torchrun Gloo/NCCL runner, four stages, native branches, exact resume, structured artifacts | complete | partial | partial | n/a |
 | S2A-030 | manifest/checkpoint/cache-bound evaluation with JSON, CSV, Parquet, Markdown, provenance and ScreenSpot guard | complete | partial | partial | n/a |
 | S2A-031 | explicit host contract, four neural partitions, overlap-safe relation grids, profile-separated reports, paper-shape graph/command parity | complete | partial | partial | partial |
+| S2A-032 | correctness review: retrieval gradients, label-independent inference, typed action coordinates/masks, exact K, manifest/calibration guards, FP16 masks, DDP diagnostics/uneven validation, initialized resume | complete | partial | partial | partial |
 
 `host-only` means the operation is deliberately outside a neural export graph.
 `n/a` means the dimension is not applicable. Production and training columns
@@ -73,3 +74,18 @@ paths are exercised; no status is inferred from architecture-only tests.
 | fixed dense export graph, four partitions, profile separation | reconstruction ADR-0026 | `export/partitions.py`, `export/runner.py`, `configs/export/` |
 | public model IDs and initial detector thresholds | supplied reconstruction | `configs/models/registry.yaml`, `MODEL_PROVENANCE.md` |
 | public source revisions, license notes, and conversion boundaries | upstream evidence plus reconstruction | `configs/data/sources.yaml`, `DATASET_RUNBOOK.md`, ADR-0020 |
+| full-graph retrieval supervision and corrected runtime boundaries | reconstruction ADR-0027 | `models/screen2action_model.py`, `training/distributed.py`, `tests/integration/test_trainable_screen2action_model.py`, correctness review plan |
+
+## Correctness review regressions
+
+- Unified-model integration tests check nonzero retrieval/reranker gradients,
+  targets dropped by retention, action-label independence, action coordinate
+  transforms, frozen crop buffers, and accumulated two-rank training with
+  different supervision masks per rank.
+- Paper-component tests check padded drag heads, missing action labels, and
+  finite FP16 masked losses and gradients on CPU.
+- Precompute integration tests check exact resume from an initialized run;
+  checkpoint tests preserve adapter-free keys and provide an opt-in CUDA RNG test.
+- Evaluation tests exercise a real K=1 sweep separately from R@8 diagnostics and
+  reject mismatched threshold bindings/digests. Data tests reject added unfrozen
+  Parquet partitions.

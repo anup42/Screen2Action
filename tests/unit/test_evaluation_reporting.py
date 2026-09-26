@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from screen2action.config import ResolvedConfig
 from screen2action.eval.reporting import fit_validation_calibration_artifacts, sha256_file
+from screen2action.eval.runner import EvaluationSettings, _load_calibration
 
 
 def _predictions(path: Path, *, split: str, source: str) -> None:
@@ -56,6 +58,24 @@ def test_validation_calibration_writes_separately_bound_artifacts(tmp_path: Path
         Path(str(result["temperature_artifact"]))
     )
     assert threshold["policy"]["coverage"] > 0.0
+    assert _load_calibration(tmp_path / "calibration", checkpoint_digest="a" * 64) is not None
+    threshold["binding"]["checkpoint_sha256"] = "c" * 64
+    Path(str(result["threshold_artifact"])).write_text(json.dumps(threshold), encoding="utf-8")
+    with pytest.raises(ValueError, match="threshold.*binding"):
+        _load_calibration(tmp_path / "calibration", checkpoint_digest="a" * 64)
+    threshold["binding"]["checkpoint_sha256"] = "a" * 64
+    threshold["temperature_artifact_sha256"] = "d" * 64
+    Path(str(result["threshold_artifact"])).write_text(json.dumps(threshold), encoding="utf-8")
+    with pytest.raises(ValueError, match="temperature digest"):
+        _load_calibration(tmp_path / "calibration", checkpoint_digest="a" * 64)
+
+
+@pytest.mark.parametrize("k", [1, 4, 8, 16])
+def test_evaluation_honors_grounding_k_independently_of_recall_diagnostics(k: int) -> None:
+    config = ResolvedConfig({"schema_version": 1, "evaluation": {"retrieval_top_k": [k]}}, (), ())
+    settings = EvaluationSettings.from_config(config)
+    assert settings.top_k == k
+    assert {1, 4, 8}.issubset(settings.recall_ks)
 
 
 @pytest.mark.parametrize(

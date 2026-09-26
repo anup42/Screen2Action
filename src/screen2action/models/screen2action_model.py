@@ -8,8 +8,10 @@ from typing import cast
 
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 from screen2action.data.schema import EdgeRecord, NodeRecord, ScreenRecord
+from screen2action.losses.total import TotalLossWeights
 from screen2action.models.batching import CommandBatch
 from screen2action.models.bert_adapter import CompactBertAdapter
 from screen2action.models.command_encoder import CommandEncoder, CommandEncoding
@@ -138,6 +140,7 @@ class EncodedFrameBatch:
     edges: tuple[tuple[EdgeRecord, ...], ...]
     selections: tuple[SelectionResult | None, ...]
     screenshots: tuple[torch.Tensor, ...]
+    full_node_states: torch.Tensor
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,6 +156,9 @@ class GroundCommandOutput:
     expanded_crop_boxes: torch.Tensor
     retrieval_scores: torch.Tensor
     forced_positive_mask: torch.Tensor
+    ranked_node_ids: torch.Tensor
+    ranked_valid_mask: torch.Tensor
+    retrieval_loss: torch.Tensor
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,6 +212,8 @@ class Screen2ActionModel(nn.Module):
         command_encoder: nn.Module | None = None,
         crop_encoder: nn.Module | None = None,
         confidence_config: ConfidenceReconstructionConfig | None = None,
+        loss_weights: TotalLossWeights | None = None,
+        contrastive_temperature: float = 0.07,
     ) -> None:
         super().__init__()
         self.config = config or Screen2ActionModelConfig.tiny_cpu()
@@ -260,6 +268,10 @@ class Screen2ActionModel(nn.Module):
             blocks=2,
         )
         self.confidence_config = confidence_config or ConfidenceReconstructionConfig()
+        self.loss_weights = loss_weights or TotalLossWeights()
+        if not 0.0 < contrastive_temperature < float("inf"):
+            raise ValueError("contrastive temperature must be finite and positive")
+        self.contrastive_temperature = contrastive_temperature
 
     def set_crop_encoder_updates_frozen(self, frozen: bool) -> None:
         """Stop crop-encoder gradients while retaining parameters in DDP/optimizer state."""
@@ -486,6 +498,7 @@ class Screen2ActionModel(nn.Module):
             tuple(positioned_edges),
             tuple(selections),
             screenshots_out,
+            states,
         )
 
     def _command_encoding(self, commands: CommandBatch) -> CommandEncoding:
@@ -501,6 +514,8 @@ class Screen2ActionModel(nn.Module):
         *,
         forced_positive_probability: float = 0.0,
         relation_reranking: bool = True,
+        diagnostic_top_k: int | None = None,
+        compute_retrieval_loss: bool = False,
         generator: torch.Generator | None = None,
     ) -> GroundCommandOutput:
         """Fan command retrieval/crops/grounding out from reusable frame states."""
@@ -512,6 +527,8 @@ class Screen2ActionModel(nn.Module):
             raise ValueError("ground_commands requires at least one command")
         if not 0.0 <= forced_positive_probability <= 1.0:
             raise ValueError("forced-positive probability must be in [0, 1]")
+        if diagnostic_top_k is not None and diagnostic_top_k <= 0:
+            raise ValueError("diagnostic_top_k must be positive")
         if int(command_batch.screen_indices.max()) >= len(encoded_frames.records):
             raise ValueError("command references a screen outside the encoded batch")
         command_encoding = self._command_encoding(command_batch)
@@ -524,6 +541,9 @@ class Screen2ActionModel(nn.Module):
         crop_batches: list[torch.Tensor] = []
         node_tokens: list[torch.Tensor] = []
         forced_positive: list[bool] = []
+        ranked_ids: list[tuple[int, ...]] = []
+        ranked_valid: list[torch.Tensor] = []
+        retrieval_losses: list[torch.Tensor] = []
         for command_index in range(command_count):
             screen_index = int(command_batch.screen_indices[command_index])
             nodes = encoded_frames.records[screen_index]
@@ -539,24 +559,49 @@ class Screen2ActionModel(nn.Module):
                     selected_mask,
                 )
                 if relation_reranking
-                else base.masked_fill(~selected_mask, -1e9)
-            )
-            requested_action = (
-                int(command_batch.action_types[command_index])
-                if bool(command_batch.action_mask[command_index])
-                else None
+                else base.masked_fill(~selected_mask, max(-1e9, torch.finfo(base.dtype).min))
             )
             retrieval = select_top_k_actionable(
                 reranked,
                 nodes,
-                k=self.config.top_k,
+                k=max(self.config.top_k, diagnostic_top_k or self.config.top_k),
                 actionability_threshold=self.config.actionability_threshold,
-                requested_action_index=requested_action,
                 valid_mask=selected_mask,
             )
-            positions = retrieval.node_indices
-            valid = retrieval.valid
-            scores = retrieval.scores
+            ranked_ids.append(retrieval.node_ids)
+            ranked_valid.append(retrieval.valid)
+            positions = retrieval.node_indices[: self.config.top_k]
+            valid = retrieval.valid[: self.config.top_k]
+            scores = retrieval.scores[: self.config.top_k]
+            # Hard top-K cannot train retrieval. Supervise the full same-screen
+            # ranking, including a target omitted by stochastic retention.
+            if compute_retrieval_loss and bool(command_batch.target_mask[command_index]):
+                target_id = int(command_batch.target_node_ids[command_index])
+                positive = next(
+                    (i for i, node in enumerate(nodes) if node.node_id == target_id), None
+                )
+                if positive is not None:
+                    full_states = encoded_frames.full_node_states[screen_index, :node_count]
+                    full_scores = self.retriever(
+                        command_encoding.pooled[command_index], full_states
+                    )
+                    full_reranked = self.reranker(
+                        full_scores, full_states, encoded_frames.edges[screen_index]
+                    )
+                    label = torch.tensor([positive], device=self.device)
+                    retrieval_losses.append(
+                        0.5
+                        * (
+                            F.cross_entropy(
+                                full_scores.float().unsqueeze(0) / self.contrastive_temperature,
+                                label,
+                            )
+                            + F.cross_entropy(
+                                full_reranked.float().unsqueeze(0) / self.contrastive_temperature,
+                                label,
+                            )
+                        )
+                    )
             inserted = False
             if forced_positive_probability > 0.0 and bool(command_batch.target_mask[command_index]):
                 draw = float(torch.rand((), device=self.device, generator=generator).detach().cpu())
@@ -616,9 +661,16 @@ class Screen2ActionModel(nn.Module):
             node_tokens.append(features[positions])
         crops_tensor = torch.stack(crop_batches).to(self.device)
         flat_crops = crops_tensor.flatten(0, 1)
-        crop_tokens = cast(torch.Tensor, self.crop_encoder(flat_crops))
         if self.crop_encoder_updates_frozen:
-            crop_tokens = crop_tokens.detach()
+            crop_training = self.crop_encoder.training
+            try:
+                self.crop_encoder.eval()
+                with torch.no_grad():
+                    crop_tokens = cast(torch.Tensor, self.crop_encoder(flat_crops))
+            finally:
+                self.crop_encoder.train(crop_training)
+        else:
+            crop_tokens = cast(torch.Tensor, self.crop_encoder(flat_crops))
         expected_shape = (
             command_count * self.config.top_k,
             self.config.crop_tokens,
@@ -656,6 +708,11 @@ class Screen2ActionModel(nn.Module):
             torch.stack(expanded_boxes),
             torch.stack(retrieval_scores),
             torch.tensor(forced_positive, dtype=torch.bool, device=self.device),
+            torch.tensor(ranked_ids, dtype=torch.long, device=self.device),
+            torch.stack(ranked_valid),
+            torch.stack(retrieval_losses).mean()
+            if retrieval_losses
+            else command_encoding.pooled.sum() * 0.0,
         )
 
     def _retention_supervision(
@@ -727,8 +784,12 @@ class Screen2ActionModel(nn.Module):
                         )
                     )
                     point_mask[index] = True
-            if commands.parameter_targets.shape[1] >= 9:
-                long_point[index] = commands.parameter_targets[index, 7:9]
+            if commands.parameter_targets.shape[1] >= 9 and bool(candidate_mask[index]):
+                box = grounded.expanded_crop_boxes[index, candidate_indices[index]]
+                long_point[index] = (
+                    (commands.parameter_targets[index, 7:9] - box[:2])
+                    / (box[2:] - box[:2]).clamp_min(1e-6)
+                ).clamp(0, 1)
                 long_mask[index] = bool(commands.parameter_mask[index, 7:9].all())
             if bool(commands.parameter_node_mask[index, 0]):
                 rank, found = self._candidate_rank(
@@ -744,9 +805,19 @@ class Screen2ActionModel(nn.Module):
                 )
                 drag_destination[index] = rank
                 drag_mask[index] &= found
+            else:
+                drag_mask[index] = False
             if commands.parameter_targets.shape[1] >= 7:
-                drag_source_point[index] = commands.parameter_targets[index, 2:4]
-                drag_destination_point[index] = commands.parameter_targets[index, 4:6]
+                source_box = grounded.expanded_crop_boxes[index, drag_source[index]]
+                destination_box = grounded.expanded_crop_boxes[index, drag_destination[index]]
+                drag_source_point[index] = (
+                    (commands.parameter_targets[index, 2:4] - source_box[:2])
+                    / (source_box[2:] - source_box[:2]).clamp_min(1e-6)
+                ).clamp(0, 1)
+                drag_destination_point[index] = (
+                    (commands.parameter_targets[index, 4:6] - destination_box[:2])
+                    / (destination_box[2:] - destination_box[:2]).clamp_min(1e-6)
+                ).clamp(0, 1)
                 drag_duration[index] = commands.parameter_targets[index, 6:7]
                 drag_mask[index] &= bool(commands.parameter_mask[index, 2:6].all())
                 drag_duration_mask[index] = drag_mask[index] and bool(
@@ -816,6 +887,7 @@ class Screen2ActionModel(nn.Module):
             encoded,
             batch.commands,
             forced_positive_probability=(forced_positive_probability if self.training else 0.0),
+            compute_retrieval_loss=stage != "inference",
             generator=generator,
         )
         target_retention, reference_retention = self._retention_supervision(encoded, batch.commands)
@@ -825,6 +897,8 @@ class Screen2ActionModel(nn.Module):
             reference_mask=reference_retention,
             token_costs=encoded.retention_token_costs,
             budgets=encoded.budgets,
+            survival_weight=self.loss_weights.survive,
+            budget_weight=self.loss_weights.budget,
         )
         grounding_supervision = self._grounding_supervision(grounded, batch.commands)
         grounding_losses = grounding_loss(
@@ -833,8 +907,15 @@ class Screen2ActionModel(nn.Module):
             candidate_boxes=grounded.expanded_crop_boxes,
             confidence_config=self.confidence_config,
             step=step,
+            candidate_weight=self.loss_weights.candidate,
+            point_weight=self.loss_weights.point,
+            action_weight=self.loss_weights.action,
         )
-        total = grounding_losses.total + retention_losses.total
+        total = (
+            grounding_losses.total
+            + retention_losses.total
+            + self.loss_weights.ui * grounded.retrieval_loss
+        )
         return Screen2ActionModelOutput(
             frames,
             encoded,

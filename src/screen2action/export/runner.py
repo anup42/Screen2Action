@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import cast
 
 import torch
-import yaml  # type: ignore[import-untyped]
+import yaml
 from torch import nn
 
 from screen2action.config import ResolvedConfig

@@ -183,7 +183,7 @@ class RelationAwareReranker(nn.Module):
             and bool(valid_nodes[edge.dst])
         ]
         if not edge_list:
-            return output.masked_fill(~valid_nodes, -1e9)
+            return output.masked_fill(~valid_nodes, max(-1e9, torch.finfo(output.dtype).min))
         normalized_weights = torch.softmax(self.relation_weights, dim=0)
         for relation_index, relation in enumerate(RELATION_ORDER):
             relation_edges = [edge for edge in edge_list if edge.relation is relation]
@@ -226,7 +226,7 @@ class RelationAwareReranker(nn.Module):
                     * normalized_weights[relation_index]
                     * (neighbor_weights * source_scores).sum()
                 )
-        return output.masked_fill(~valid_nodes, -1e9)
+        return output.masked_fill(~valid_nodes, max(-1e9, torch.finfo(output.dtype).min))
 
     def forward_batched(
         self,
@@ -302,11 +302,16 @@ class RelationAwareReranker(nn.Module):
             )
             compatibility = self.compatibility[relation_index](compatibility_input).squeeze(-1)
             edge_mask = relation_mask[:, relation_index].bool() & source_valid & destination_valid
-            neighbor_weights = torch.softmax(compatibility.masked_fill(~edge_mask, -1e9), dim=1)
+            neighbor_weights = torch.softmax(
+                compatibility.masked_fill(
+                    ~edge_mask, max(-1e9, torch.finfo(compatibility.dtype).min)
+                ),
+                dim=1,
+            )
             neighbor_weights = neighbor_weights * edge_mask.to(neighbor_weights.dtype)
             neighbor_weights = neighbor_weights / neighbor_weights.sum(
                 dim=1, keepdim=True
-            ).clamp_min(1e-12)
+            ).clamp_min(max(1e-12, torch.finfo(neighbor_weights.dtype).tiny))
             evidence = (neighbor_weights * base_scores.unsqueeze(2)).sum(dim=1)
             output = output + self.lambda_ref * normalized_weights[relation_index] * evidence
-        return output.masked_fill(~valid_nodes.bool(), -1e9)
+        return output.masked_fill(~valid_nodes.bool(), max(-1e9, torch.finfo(output.dtype).min))

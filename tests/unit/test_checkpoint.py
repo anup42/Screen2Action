@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
 from screen2action.training.checkpoints import load_checkpoint, save_checkpoint
+from screen2action.training.distributed import OptimizationOutputAdapter
 from screen2action.training.seed import seed_everything
 from screen2action.training.tiny import TinyGroundingModel
 
@@ -38,3 +40,29 @@ def test_checkpoint_resume_restores_model_optimizer_and_rng(tmp_path) -> None:
     assert torch.allclose(loss_a, loss_b, atol=1e-6, rtol=1e-6)
     for left, right in zip(model_a.parameters(), model_b.parameters(), strict=True):
         assert torch.allclose(left, right, atol=1e-6, rtol=1e-6)
+
+
+def test_optimization_adapter_preserves_checkpoint_model_keys(tmp_path) -> None:
+    model = TinyGroundingModel(vocab_size=12)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+    checkpoint = tmp_path / "adapter.pt"
+    save_checkpoint(checkpoint, OptimizationOutputAdapter(model), optimizer, epoch=0, step=0)
+    state = torch.load(checkpoint, weights_only=False, map_location="cpu")
+    assert set(state["model"]) == set(model.state_dict())
+    load_checkpoint(checkpoint, OptimizationOutputAdapter(model), optimizer)
+
+
+@pytest.mark.gpu
+def test_cuda_checkpoint_restores_cpu_and_device_rng(tmp_path) -> None:
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA unavailable")
+    model = torch.nn.Linear(2, 1).to("cuda")
+    optimizer = torch.optim.AdamW(model.parameters())
+    seed_everything(31)
+    checkpoint = tmp_path / "cuda.pt"
+    save_checkpoint(checkpoint, model, optimizer, epoch=0, step=0)
+    expected_cpu = torch.rand(3)
+    expected_cuda = torch.rand(3, device="cuda")
+    load_checkpoint(checkpoint, model, optimizer, device="cuda")
+    assert torch.equal(torch.rand(3), expected_cpu)
+    assert torch.equal(torch.rand(3, device="cuda"), expected_cuda)

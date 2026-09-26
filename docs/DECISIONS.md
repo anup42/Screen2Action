@@ -397,3 +397,42 @@ Paper-dimension graph/retention and command/retrieval/reranking parity with
 locally initialized modules is architecture/equation evidence only. It is not
 a claim about pretrained weights, quantized accuracy, mobile operator support,
 artifact size, or Galaxy latency.
+
+## ADR-0027: Supervised retrieval and correctness boundaries after review
+
+**Status:** accepted for the public reconstruction (2026-09-26).
+
+Hard top-K identities cannot pass a gradient to retrieval scores. The unified
+objective now trains both cosine retrieval and relation reranking with the mean
+of their same-screen cross-entropy losses, each using logits divided by the
+configured InfoNCE temperature. It uses the full, unpruned graph so a dropped target still provides
+retrieval supervision. This combination is a reconstruction choice. The paper
+defaults remain UI weight 0.2 and temperature 0.07; all six objective weights
+are exposed under `training.loss_weights`. Inference skips the auxiliary loss.
+
+Candidate selection uses predicted actionability across all action types. A
+ground-truth action label is supervision only and cannot choose inference
+candidates. Long-press and drag labels enter as screen coordinates and are
+converted to the corresponding expanded crop before loss calculation. Missing
+target/action/endpoint labels disable their losses, and every candidate-index
+head masks padded slots. Evaluation grounds exactly the requested K candidates;
+larger retrieval-recall cutoffs are diagnostics without additional crop/grounder
+work. Previously produced small-K or label-conditioned evaluation reports should
+be regenerated.
+
+DDP receives a differentiable total loss with detached diagnostic outputs so
+unused heads are discovered correctly on each rank. Public model forwards keep
+their differentiable diagnostic API. Checkpoints unwrap the adapter and retain
+the original model keys. Validation synchronizes buffers once and runs the
+unwrapped model, permitting unequal or empty rank shards. Frozen crop warmup
+also freezes BatchNorm statistics and stochastic layer behavior.
+
+Exact resume retains the original initialization digest, and checkpoint RNG byte
+tensors load on CPU even for a CUDA destination. FP16 masking uses representable
+finite values and nonzero empty-neighborhood denominators. These changes have
+CPU and two-rank Gloo regression evidence; CUDA execution remains opt-in.
+
+Frozen data manifests reject newly added canonical metadata partitions as well
+as changed referenced bytes. Threshold-policy loading verifies both its binding
+and temperature-artifact hash before use. Local source registration uses a
+short UUID staging name to avoid repeating long revision identifiers on Windows.

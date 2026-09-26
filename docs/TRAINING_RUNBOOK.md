@@ -50,3 +50,26 @@ screen2action perception stats <cache-manifest> --json
 Stage 2 must open the cache through `CachedPerceptionLoader`, provide the
 expected model-lock/config/data-manifest digests, and refuse incomplete shard
 runs. Training workers do not instantiate ScreenParser or CRNN.
+
+## Objective and resume checks
+
+The unified runner uses `training.loss_weights` (`candidate`, `point`, `action`,
+`ui`, `survive`, `budget`) and `training.ui_contrastive_temperature`. The shipped
+experiment profiles declare the paper defaults. UI loss averages full-screen
+cosine and reranked cross-entropy (ADR-0027) so hard candidate selection does not
+disconnect retrieval training. Logs include `ui_contrastive_loss`.
+
+Action labels never influence inference candidate selection. Canonical action
+points are screen-normalized; model supervision converts long-press and both
+drag endpoints to their expanded candidate crops. Missing labels stay masked.
+
+Resume an initialized run using its `latest.pt` and original run directory;
+omit `--init-checkpoint` on resume. The original initialization digest is read
+from the immutable run manifest and all current config/data/model/code checks
+still apply. DDP diagnostics are detached only at the training wrapper boundary;
+model-only checkpoints preserve the same keys as single-process models.
+
+The correctness review changed the training objective and candidate selection.
+Older weights remain topology-compatible, but an exact resume across changed
+code is intentionally rejected. Start a new run with explicit model-only
+initialization, and regenerate previous evaluation and calibration reports.

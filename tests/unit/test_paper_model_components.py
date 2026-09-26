@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -317,8 +318,39 @@ def test_sparse_grounder_masks_crop_tokens_and_action_specific_losses() -> None:
     )
 
     assert output.candidate_logits[:, 2].max() < -1e8
+    assert output.drag_source_logits[:, 2].max() < -1e8
+    assert output.drag_destination_logits[:, 2].max() < -1e8
     assert torch.isfinite(losses.total)
     assert losses.confidence_count == 4
     losses.total.backward()
     assert grounder.drag_destination_point_head.weight.grad is not None
     assert grounder.scroll_delta_head.weight.grad is not None
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
+def test_masked_action_losses_and_padding_are_finite(dtype: torch.dtype) -> None:
+    grounder = SparseCandidateGrounder(embedding_dim=16, heads=4, blocks=1).to(dtype=dtype)
+    output = grounder(
+        torch.randn(4, 3, 16, dtype=dtype),
+        torch.randn(4, 3, 4, 16, dtype=dtype),
+        torch.randn(4, 3, 16, dtype=dtype),
+        candidate_mask=torch.tensor([[True, True, False]] * 4),
+    )
+    supervision = replace(_grounding_supervision(4), action_mask=torch.zeros(4, dtype=torch.bool))
+    losses = grounding_loss(output, supervision, candidate_boxes=torch.zeros(4, 3, 4))
+    assert torch.isfinite(losses.total)
+    assert losses.action == losses.point == losses.parameters == 0
+    assert bool((output.drag_destination_logits.argmax(-1) != 2).all())
+    losses.total.backward()
+    assert grounder.candidate_head.weight.grad is not None
+    assert torch.isfinite(grounder.candidate_head.weight.grad).all()
+
+
+def test_missing_target_does_not_train_an_arbitrary_candidate_action() -> None:
+    grounder = SparseCandidateGrounder(embedding_dim=16, heads=4, blocks=1)
+    output = grounder(torch.randn(4, 3, 16), torch.randn(4, 2, 4, 16), torch.randn(4, 2, 16))
+    supervision = replace(
+        _grounding_supervision(4), candidate_mask=torch.zeros(4, dtype=torch.bool)
+    )
+    losses = grounding_loss(output, supervision, candidate_boxes=torch.zeros(4, 2, 4))
+    assert losses.action == losses.point == 0

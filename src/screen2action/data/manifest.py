@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from screen2action.data.assets import FileDigest, sha256_file
 from screen2action.data.schema import CANONICAL_SCHEMA_VERSION
@@ -292,6 +292,12 @@ def verify_data_manifest(path: Path) -> ManifestVerification:
     membership_path = path.parent / str(payload["split"]["membership_path"])
     if sha256_file(membership_path) != payload["split"]["membership_digest"]:
         raise ValueError("split membership digest mismatch")
+    frozen_paths = {str(raw["path"]) for raw in payload["files"]}
+    for table in ("screens", "elements", "commands", "references"):
+        for metadata_path in dataset_table_paths(dataset_root, table):
+            relative_path = _portable_relative(metadata_path, dataset_root)
+            if relative_path not in frozen_paths:
+                raise ValueError(f"unfrozen metadata file: {relative_path}")
     verified = 0
     total_bytes = 0
     for raw in payload["files"]:

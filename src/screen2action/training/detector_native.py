@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import torch
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from screen2action.config import ResolvedConfig, write_resolved_config
 from screen2action.handoff import repository_root

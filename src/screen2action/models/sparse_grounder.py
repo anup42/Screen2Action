@@ -279,16 +279,23 @@ class SparseCandidateGrounder(nn.Module):
             )
         candidate_states = group_states[:, :, 0]
         candidate_logits = self.candidate_head(candidate_states).squeeze(-1)
-        candidate_logits = candidate_logits.masked_fill(~candidate_mask.bool(), -1e9)
+        mask_value = max(-1e9, torch.finfo(candidate_logits.dtype).min)
+        candidate_logits = candidate_logits.masked_fill(~candidate_mask.bool(), mask_value)
         point_local = torch.sigmoid(self.point_head(candidate_states))
         action_type_logits = self.action_head(candidate_states)
         action_parameter = torch.tanh(self.action_parameter_head(candidate_states))
         long_press_point = torch.sigmoid(self.long_press_point_head(candidate_states))
         scroll_container_logits = self.scroll_container_head(candidate_states).squeeze(-1)
-        scroll_container_logits = scroll_container_logits.masked_fill(~candidate_mask.bool(), -1e9)
+        scroll_container_logits = scroll_container_logits.masked_fill(
+            ~candidate_mask.bool(), mask_value
+        )
         scroll_delta = torch.tanh(self.scroll_delta_head(candidate_states))
         drag_source_logits = self.drag_source_head(candidate_states).squeeze(-1)
         drag_destination_logits = self.drag_destination_head(candidate_states).squeeze(-1)
+        drag_source_logits = drag_source_logits.masked_fill(~candidate_mask.bool(), mask_value)
+        drag_destination_logits = drag_destination_logits.masked_fill(
+            ~candidate_mask.bool(), mask_value
+        )
         drag_source_point = torch.sigmoid(self.drag_source_point_head(candidate_states))
         drag_destination_point = torch.sigmoid(self.drag_destination_point_head(candidate_states))
         drag_duration = torch.sigmoid(self.drag_duration_head(candidate_states))

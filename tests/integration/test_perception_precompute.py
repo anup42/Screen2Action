@@ -386,6 +386,27 @@ def test_stage2_runner_exact_resume_matches_uninterrupted_cpu(tmp_path: Path) ->
     precompute_perception(manifest, service=service, cache=cache)
     cache_manifest = cache.root / "manifest.json"
     resolved = _tiny_stage2_config()
+    from screen2action.training.checkpoints import manifest_hash
+    from screen2action.training.data import load_training_corpus
+    from screen2action.training.model_factory import build_screen2action_model
+
+    corpus = load_training_corpus(manifest)
+    initialized = build_screen2action_model(
+        resolved.values,
+        tokenizer_vocab_size=corpus.tokenizer.vocab_size,
+        model_lock_path=None,
+        cache_root=tmp_path / "models",
+    )
+    initialization = tmp_path / "initial.pt"
+    torch.save(
+        {
+            "model": initialized.model.state_dict(),
+            "manifest_hash": corpus.manifest_digest,
+            "model_lock_hash": initialized.model_lock_digest,
+            "cache_manifest_hash": manifest_hash(cache_manifest),
+        },
+        initialization,
+    )
     resumed_directory = tmp_path / "resumed-run"
     first = run_training_stage(
         resolved,
@@ -394,6 +415,7 @@ def test_stage2_runner_exact_resume_matches_uninterrupted_cpu(tmp_path: Path) ->
         cache_manifest=cache_manifest,
         run_directory=resumed_directory,
         stop_after_optimizer_steps=1,
+        init_checkpoint=initialization,
     )
     assert first.status == "stopped"
     assert first.latest_checkpoint is not None
@@ -414,6 +436,7 @@ def test_stage2_runner_exact_resume_matches_uninterrupted_cpu(tmp_path: Path) ->
         manifest=manifest,
         cache_manifest=cache_manifest,
         run_directory=tmp_path / "uninterrupted-run",
+        init_checkpoint=initialization,
     )
     assert resumed.status == uninterrupted.status == "complete"
     resumed_state = torch.load(

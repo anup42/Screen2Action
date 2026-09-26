@@ -96,6 +96,13 @@ def test_wave_ui_fixture_runs_through_frozen_manifest_and_shards(tmp_path: Path)
     shard_result = build_webdataset_shards(manifest_path, tmp_path / "shards", max_samples=1)
     assert shard_result["screen_count"] == 1
 
+    original = next((dataset / "commands").rglob("*.parquet"))
+    extra = original.with_name("unfrozen.parquet")
+    extra.write_bytes(original.read_bytes())
+    with pytest.raises(ValueError, match="unfrozen metadata"):
+        verify_data_manifest(manifest_path)
+    extra.unlink()
+
     image = next((dataset / "images").rglob("*.png"))
     image.write_bytes(image.read_bytes() + b"corrupt")
     with pytest.raises(ValueError, match="manifest file digest mismatch"):

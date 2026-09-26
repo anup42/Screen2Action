@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import Any, cast
 
 import torch
@@ -154,6 +154,45 @@ def initialize_process_group(backend: str = "gloo") -> None:
         raise RuntimeError("requested backend does not match the selected device")
 
 
+def _detach_diagnostics(value: Any) -> Any:
+    if isinstance(value, torch.Tensor):
+        return value.detach() if value.requires_grad else value
+    if is_dataclass(value) and not isinstance(value, type):
+        return replace(
+            value,
+            **{
+                field.name: _detach_diagnostics(getattr(value, field.name))
+                for field in fields(value)
+            },
+        )
+    if isinstance(value, tuple):
+        return tuple(_detach_diagnostics(item) for item in value)
+    if isinstance(value, list):
+        return [_detach_diagnostics(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _detach_diagnostics(item) for key, item in value.items()}
+    return value
+
+
+class OptimizationOutputAdapter(nn.Module):
+    """Expose only the optimized loss graph to DDP unused-parameter discovery.
+
+    Structured stage outputs contain predictions from heads without labels on a
+    particular rank. Their diagnostic tensors must not mark those heads as used.
+    The underlying public model retains its ordinary differentiable API.
+    """
+
+    def __init__(self, module: nn.Module) -> None:
+        super().__init__()
+        self.module = module
+
+    def forward(self, *args: Any, **kwargs: Any) -> Any:
+        output = self.module(*args, **kwargs)
+        if is_dataclass(output) and not isinstance(output, type) and hasattr(output, "total_loss"):
+            return replace(_detach_diagnostics(output), total_loss=output.total_loss)
+        return output
+
+
 def wrap_ddp(
     model: nn.Module,
     context: DistributedContext,
@@ -167,6 +206,8 @@ def wrap_ddp(
         return model
     if not context.process_group_initialized:
         raise RuntimeError("cannot wrap DDP without an initialized process group")
+    if find_unused_parameters:
+        model = OptimizationOutputAdapter(model)
     if context.device.type == "cuda":
         return DistributedDataParallel(
             model,

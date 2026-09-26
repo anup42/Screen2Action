@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Protocol, cast
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from screen2action import MODEL_LOCK_SCHEMA_VERSION
 

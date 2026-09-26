@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import cast
 
+from screen2action.losses.total import TotalLossWeights
 from screen2action.model_assets import (
     LockedModel,
     ModelLock,
@@ -178,9 +179,23 @@ def build_screen2action_model(
     if profile not in {"tiny_cpu", "paper_reference"}:
         raise ValueError("model.profile must be tiny_cpu or paper_reference")
     model_config = _config(values, profile=profile, vocab_size=tokenizer_vocab_size)
+    training = _mapping(config_values.get("training"), context="training")
+    weight_values = _mapping(training.get("loss_weights"), context="training.loss_weights")
+    defaults = TotalLossWeights()
+    loss_weights = TotalLossWeights(
+        **{
+            field.name: _number(weight_values, field.name, getattr(defaults, field.name))
+            for field in fields(defaults)
+        }
+    )
+    contrastive_temperature = _number(training, "ui_contrastive_temperature", 0.07)
     if profile == "tiny_cpu":
         return TrainModelBundle(
-            Screen2ActionModel(config=model_config),
+            Screen2ActionModel(
+                config=model_config,
+                loss_weights=loss_weights,
+                contrastive_temperature=contrastive_temperature,
+            ),
             profile,
             "fixture-no-model-lock",
             (),
@@ -208,6 +223,8 @@ def build_screen2action_model(
             config=model_config,
             command_encoder=command_encoder,
             crop_encoder=crop_encoder,
+            loss_weights=loss_weights,
+            contrastive_temperature=contrastive_temperature,
         ),
         profile,
         lock.digest,

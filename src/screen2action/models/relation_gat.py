@@ -278,9 +278,16 @@ class RelationAwareGraphAttention(nn.Module):
                 self.head_dim**0.5
             )
             edge_mask = relation_mask[:, relation_id].bool() & source_valid & destination_valid
-            weights = torch.softmax(scores.masked_fill(~edge_mask.unsqueeze(-1), -1e9), dim=1)
+            weights = torch.softmax(
+                scores.masked_fill(
+                    ~edge_mask.unsqueeze(-1), max(-1e9, torch.finfo(scores.dtype).min)
+                ),
+                dim=1,
+            )
             weights = weights * edge_mask.unsqueeze(-1).to(weights.dtype)
-            weights = weights / weights.sum(dim=1, keepdim=True).clamp_min(1e-12)
+            weights = weights / weights.sum(dim=1, keepdim=True).clamp_min(
+                max(1e-12, torch.finfo(weights.dtype).tiny)
+            )
             values = self.value[relation_id](source_states).view(
                 batch, node_count, 1, self.heads, self.head_dim
             )

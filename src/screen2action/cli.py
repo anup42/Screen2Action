@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from screen2action.config import load_config, write_resolved_config
 from screen2action.doctor import doctor_report

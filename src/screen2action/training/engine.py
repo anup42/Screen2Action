@@ -11,6 +11,7 @@ from typing import Any, Protocol
 
 import torch
 from torch import nn
+from torch.nn.parallel import DistributedDataParallel
 
 from screen2action.training.distributed import DistributedContext
 
@@ -304,13 +305,20 @@ class Trainer:
         if not batches and not self.distributed.distributed:
             raise ValueError("validation batches cannot be empty")
         self.model.eval()
+        validation_model = self.model
+        if isinstance(self.model, DistributedDataParallel):
+            # Validation shards may have unequal batch counts (including zero).
+            # Synchronize buffers once, then avoid per-forward DDP collectives.
+            validation_model = self.model.module
+            for buffer in validation_model.buffers():
+                torch.distributed.broadcast(buffer, src=0)
         loss_sum = 0.0
         examples = 0
         components: dict[str, float] = {}
         with torch.no_grad():
             for batch in batches:
                 with _autocast_context(self.device, self.config.precision):
-                    raw = loss_function(self.model, batch, self.global_step)
+                    raw = loss_function(validation_model, batch, self.global_step)
                 result = raw if isinstance(raw, LossResult) else LossResult(raw, {}, 1)
                 if result.loss.ndim != 0 or not bool(torch.isfinite(result.loss)):
                     raise FloatingPointError("validation loss is not a finite scalar")

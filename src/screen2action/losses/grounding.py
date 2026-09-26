@@ -17,7 +17,9 @@ def candidate_loss(
         raise ValueError("candidate logits must be [B,K] and targets must be [B]")
     logits = candidate_logits
     if candidate_mask is not None:
-        logits = logits.masked_fill(~candidate_mask.bool(), -1e9)
+        logits = logits.masked_fill(
+            ~candidate_mask.bool(), max(-1e9, torch.finfo(logits.dtype).min)
+        )
     if torch.any(target_index < 0) or torch.any(target_index >= logits.shape[1]):
         raise ValueError("candidate targets are outside the candidate dimension")
     return F.cross_entropy(logits, target_index)

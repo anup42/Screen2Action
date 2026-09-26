@@ -120,7 +120,9 @@ class CommandRetrievalPartition(nn.Module):
         query = F.normalize(self.retriever.query_projection(command.pooled), dim=-1)
         nodes = F.normalize(self.retriever.node_projection(graph_states), dim=-1)
         base_scores = (nodes * query.unsqueeze(1)).sum(dim=-1)
-        base_scores = base_scores.masked_fill(~valid_nodes.bool(), -1e9)
+        base_scores = base_scores.masked_fill(
+            ~valid_nodes.bool(), max(-1e9, torch.finfo(base_scores.dtype).min)
+        )
         reranked = self.reranker.forward_dense(
             base_scores,
             graph_states,

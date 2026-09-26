@@ -114,7 +114,7 @@ class EvaluationSettings:
         )
         configured_ks = _int_list(raw_ks, context="evaluation.retrieval_top_k")
         recall_ks = tuple(sorted(set((1, 4, 8, *configured_ks))))
-        top_k = max(recall_ks)
+        top_k = max(configured_ks)
         raw_budgets = evaluation.get(
             "budgets",
             evaluation.get("ssb_budget", values.get("ssb_budgets", model.get("ssb_budget", 512))),
@@ -227,7 +227,13 @@ def _load_calibration(
         threshold_raw = json.loads(threshold_path.read_text(encoding="utf-8"))
         if not isinstance(threshold_raw, dict) or not isinstance(threshold_raw.get("policy"), dict):
             raise ValueError("threshold artifact is malformed")
+        if threshold_raw.get("binding") != binding:
+            raise ValueError("threshold artifact binding does not match temperature artifact")
+        if threshold_raw.get("temperature_artifact_sha256") != sha256_file(temperature_path):
+            raise ValueError("threshold artifact temperature digest mismatch")
         threshold = float(str(threshold_raw["policy"].get("threshold")))
+        if not math.isfinite(threshold) or not 0.0 <= threshold <= 1.0000001:
+            raise ValueError("threshold artifact probability is invalid")
     return CalibrationBinding(
         temperature,
         threshold,
@@ -339,7 +345,7 @@ def _failure_reason(
 
 def _peak_process_memory() -> tuple[str, int]:
     try:
-        import psutil  # type: ignore[import-untyped]
+        import psutil
 
         info = psutil.Process().memory_info()
         peak = getattr(info, "peak_wset", None)
@@ -455,6 +461,7 @@ def run_evaluation(
                     encoded,
                     batch.commands,
                     relation_reranking=settings.relation_reranking,
+                    diagnostic_top_k=max(settings.recall_ks),
                 )
                 grounding_ms = _elapsed_ms(torch_device, started)
                 started = time.perf_counter()
@@ -512,7 +519,16 @@ def run_evaluation(
                     )
                     retrieval_hits = {
                         str(k): bool(
-                            match.proposal_id is not None and match.proposal_id in candidate_ids[:k]
+                            match.proposal_id is not None
+                            and bool(
+                                (
+                                    (
+                                        grounded.ranked_node_ids[command_index, :k]
+                                        == match.proposal_id
+                                    )
+                                    & grounded.ranked_valid_mask[command_index, :k]
+                                ).any()
+                            )
                         )
                         for k in settings.recall_ks
                     }

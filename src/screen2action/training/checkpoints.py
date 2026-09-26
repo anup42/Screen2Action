@@ -59,8 +59,9 @@ def configuration_hash(config: Mapping[str, Any]) -> str:
 
 
 def _unwrapped(model: nn.Module) -> nn.Module:
-    candidate = getattr(model, "module", None)
-    return candidate if isinstance(candidate, nn.Module) else model
+    while isinstance(candidate := getattr(model, "module", None), nn.Module):
+        model = candidate
+    return model
 
 
 def _optimizer_to_device(optimizer: torch.optim.Optimizer, device: torch.device) -> None:
@@ -161,7 +162,8 @@ def load_checkpoint(
     """Load v1/v2 state with explicit device mapping and digest enforcement."""
 
     target = torch.device(device)
-    raw = torch.load(Path(path), map_location=target, weights_only=False)
+    # RNG byte tensors must stay on CPU even when restoring a CUDA optimizer.
+    raw = torch.load(Path(path), map_location="cpu", weights_only=False)
     if not isinstance(raw, dict):
         raise ValueError("checkpoint payload must be a mapping")
     payload = cast(dict[str, Any], raw)

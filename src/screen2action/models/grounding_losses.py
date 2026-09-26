@@ -168,7 +168,7 @@ def grounding_loss(
 ) -> GroundingLoss:
     """Apply losses only to parameters valid for each supervised action type."""
 
-    zero = output.candidate_logits.sum() * 0.0
+    zero = output.point_local.sum() * 0.0
     candidate = (
         F.cross_entropy(
             output.candidate_logits[supervision.candidate_mask],
@@ -179,23 +179,26 @@ def grounding_loss(
     )
     rows = torch.arange(output.candidate_logits.shape[0], device=output.candidate_logits.device)
     safe_candidate = supervision.candidate_indices.clamp(0, output.candidate_logits.shape[1] - 1)
+    action_mask = supervision.action_mask & supervision.candidate_mask
     action = (
         F.cross_entropy(
-            output.action_type_logits[rows, safe_candidate][supervision.action_mask],
-            supervision.action_types[supervision.action_mask],
+            output.action_type_logits[rows, safe_candidate][action_mask],
+            supervision.action_types[action_mask],
         )
-        if bool(supervision.action_mask.any())
+        if bool(action_mask.any())
         else zero
     )
-    click_mask = supervision.point_mask & (supervision.action_types == 0)
+    click_mask = supervision.point_mask & action_mask & (supervision.action_types == 0)
     click_points = output.point_local[rows, safe_candidate]
     point = _masked_smooth_l1(click_points, supervision.point_local, click_mask, zero)
 
-    long_mask = supervision.long_press_mask & (supervision.action_types == 3)
+    long_mask = supervision.long_press_mask & action_mask & (supervision.action_types == 3)
     long_points = output.long_press_point_local[rows, safe_candidate]
     long_loss = _masked_smooth_l1(long_points, supervision.long_press_point_local, long_mask, zero)
 
-    scroll_mask = supervision.scroll_mask & (supervision.action_types == 2)
+    scroll_mask = (
+        supervision.scroll_mask & supervision.action_mask & (supervision.action_types == 2)
+    )
     scroll_container = (
         F.cross_entropy(
             output.scroll_container_logits[scroll_mask],
@@ -204,10 +207,12 @@ def grounding_loss(
         if bool(scroll_mask.any())
         else zero
     )
-    scroll_delta = output.scroll_delta[rows, safe_candidate]
+    scroll_delta = output.scroll_delta[
+        rows, supervision.scroll_container_indices.clamp(0, output.candidate_logits.shape[1] - 1)
+    ]
     scroll_delta_loss = _masked_smooth_l1(scroll_delta, supervision.scroll_delta, scroll_mask, zero)
 
-    drag_mask = supervision.drag_mask & (supervision.action_types == 1)
+    drag_mask = supervision.drag_mask & supervision.action_mask & (supervision.action_types == 1)
     drag_source = (
         F.cross_entropy(
             output.drag_source_logits[drag_mask],
@@ -239,7 +244,7 @@ def grounding_loss(
         drag_mask,
         zero,
     )
-    duration_mask = supervision.drag_duration_mask & (supervision.action_types == 1)
+    duration_mask = supervision.drag_duration_mask & drag_mask
     drag_duration = output.drag_duration[rows, safe_source]
     duration_loss = _masked_smooth_l1(drag_duration, supervision.drag_duration, duration_mask, zero)
     parameters = (

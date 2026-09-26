@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 ICON_TAXONOMY_SCHEMA_VERSION = 1
 ICON_TAXONOMY_POLICY_VERSION = "public_icon_taxonomy_v1"

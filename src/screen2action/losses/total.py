@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import torch
@@ -17,6 +18,20 @@ class TotalLossWeights:
     ui: float = 0.2
     survive: float = 0.5
     budget: float = 0.05
+
+    def __post_init__(self) -> None:
+        if any(
+            not math.isfinite(value) or value < 0
+            for value in (
+                self.candidate,
+                self.point,
+                self.action,
+                self.ui,
+                self.survive,
+                self.budget,
+            )
+        ):
+            raise ValueError("loss weights must be finite and non-negative")
 
 
 @dataclass(frozen=True, slots=True)

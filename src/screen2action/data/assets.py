@@ -502,7 +502,7 @@ def register_local_source(
             raise ValueError("existing raw directory belongs to a different source revision")
         return manifest
     destination.parent.mkdir(parents=True, exist_ok=True)
-    staging = destination.with_name(f".{destination.name}.{uuid.uuid4().hex}.partial")
+    staging = destination.with_name(f".{uuid.uuid4().hex}.partial")
     if origin.is_dir():
         shutil.copytree(origin, staging)
     else:
